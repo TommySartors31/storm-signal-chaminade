@@ -413,18 +413,211 @@
       NWS API
     */
 
-    async function getWeather() {
+   async function getWeather() {
+
+  try {
+
+    const headers = {
+      "User-Agent": "StormSignal/1.0 (weather dashboard)"
+    };
+
+    /*
+      Get NWS point information
+    */
+
+    const pointResponse = await fetch(
+      `https://api.weather.gov/points/${LAT},${LON}`,
+      { headers }
+    );
+
+    if (!pointResponse.ok) {
+      throw new Error("NWS point request failed");
+    }
+
+    const point = await pointResponse.json();
+
+
+    /*
+      CURRENT CONDITIONS
+      Try multiple nearby observation stations.
+    */
+
+    const stationsResponse = await fetch(
+      point.properties.observationStations,
+      { headers }
+    );
+
+    if (!stationsResponse.ok) {
+      throw new Error("NWS station request failed");
+    }
+
+    const stations = await stationsResponse.json();
+
+    let observation = null;
+
+    for (const station of stations.features) {
 
       try {
 
-        const pointResponse = await fetch(
-          `https://api.weather.gov/points/${LAT},${LON}`,
-          {
-            headers: {
-              "User-Agent": "StormSignal/1.0"
-            }
-          }
+        const response = await fetch(
+          `${station.id}/observations/latest`,
+          { headers }
         );
+
+        if (!response.ok) continue;
+
+        const result = await response.json();
+
+        if (
+          result.properties &&
+          result.properties.temperature &&
+          result.properties.temperature.value !== null
+        ) {
+          observation = result.properties;
+          break;
+        }
+
+      } catch (error) {
+        console.log("Station failed:", station.id);
+      }
+
+    }
+
+
+    /*
+      Display current conditions
+    */
+
+    if (observation) {
+
+      const temp =
+        observation.temperature.value !== null
+          ? Math.round(
+              observation.temperature.value * 9 / 5 + 32
+            )
+          : "--";
+
+      const wind =
+        observation.windSpeed.value !== null
+          ? Math.round(
+              observation.windSpeed.value * 0.621371
+            )
+          : "--";
+
+      const humidity =
+        observation.relativeHumidity.value !== null
+          ? Math.round(
+              observation.relativeHumidity.value
+            )
+          : "--";
+
+      const pressure =
+        observation.barometricPressure.value !== null
+          ? Math.round(
+              observation.barometricPressure.value / 100
+            )
+          : "--";
+
+      const dewPoint =
+        observation.dewpoint.value !== null
+          ? Math.round(
+              observation.dewpoint.value * 9 / 5 + 32
+            )
+          : "--";
+
+
+      document.getElementById("temperature").textContent =
+        `${temp}°`;
+
+      document.getElementById("condition").textContent =
+        observation.textDescription || "Unknown";
+
+      document.getElementById("wind").textContent =
+        `${wind} mph`;
+
+      document.getElementById("humidity").textContent =
+        `${humidity}%`;
+
+      document.getElementById("pressure").textContent =
+        `${pressure} hPa`;
+
+      document.getElementById("feels").textContent =
+        `${dewPoint}° dew point`;
+
+    } else {
+
+      document.getElementById("condition").textContent =
+        "Current observations unavailable";
+
+    }
+
+
+    /*
+      FORECAST
+    */
+
+    const forecastResponse = await fetch(
+      point.properties.forecast,
+      { headers }
+    );
+
+    if (!forecastResponse.ok) {
+      throw new Error("Forecast request failed");
+    }
+
+    const forecastData = await forecastResponse.json();
+
+    const periods = forecastData.properties.periods;
+
+    const forecastContainer =
+      document.getElementById("forecast");
+
+    forecastContainer.innerHTML = "";
+
+    const daily = [];
+
+    for (
+      let i = 0;
+      i < periods.length && daily.length < 7;
+      i++
+    ) {
+
+      const p = periods[i];
+
+      if (!p.isDaytime) continue;
+
+      daily.push(p);
+
+    }
+
+
+    daily.forEach(p => {
+
+      const div = document.createElement("div");
+
+      div.className = "forecast-day";
+
+      div.innerHTML = `
+        <div class="day">${p.name}</div>
+        <div class="icon">${weatherIcon(p.shortForecast)}</div>
+        <div class="temp">${p.temperature}°</div>
+      `;
+
+      forecastContainer.appendChild(div);
+
+    });
+
+
+  } catch (error) {
+
+    console.error("StormSignal weather error:", error);
+
+    document.getElementById("condition").textContent =
+      "Weather data temporarily unavailable";
+
+  }
+
+}
 
         const point = await pointResponse.json();
 
