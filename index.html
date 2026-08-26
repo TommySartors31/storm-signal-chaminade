@@ -858,7 +858,142 @@
                   }
                 }
               ).addTo(map);
+/*
+============================================================
+STORMSIGNAL RADAR
+============================================================
+*/
 
+let radarLayer = null;
+let radarFrames = [];
+let radarIndex = 0;
+let radarTimer = null;
+
+async function loadRadar() {
+
+  try {
+
+    const response = await fetch(
+      "https://api.rainviewer.com/public/weather-maps.json"
+    );
+
+    if (!response.ok) {
+      throw new Error("Radar API unavailable");
+    }
+
+    const data = await response.json();
+
+    /*
+      RainViewer provides recent radar frames.
+    */
+
+    const past =
+      data.radar?.past || [];
+
+    const nowcast =
+      data.radar?.nowcast || [];
+
+    radarFrames = [
+      ...past,
+      ...nowcast
+    ];
+
+    if (radarFrames.length === 0) {
+      throw new Error("No radar frames returned");
+    }
+
+    radarIndex =
+      radarFrames.length - 1;
+
+    showRadarFrame();
+
+    startRadarLoop();
+
+    console.log(
+      "StormSignal radar loaded:",
+      radarFrames.length,
+      "frames"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "StormSignal radar error:",
+      error
+    );
+
+  }
+
+}
+
+
+function showRadarFrame() {
+
+  if (!radarFrames.length) {
+    return;
+  }
+
+  const frame =
+    radarFrames[radarIndex];
+
+  const timestamp =
+    frame.time;
+
+  const path =
+    frame.path;
+
+  const radarURL =
+    `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`;
+
+  if (radarLayer) {
+    map.removeLayer(radarLayer);
+  }
+
+  radarLayer =
+    L.tileLayer(
+      radarURL,
+      {
+        opacity: 0.65,
+        tileSize: 256,
+        attribution:
+          "Radar © RainViewer"
+      }
+    );
+
+  radarLayer.addTo(map);
+
+}
+
+
+function startRadarLoop() {
+
+  if (radarTimer) {
+    clearInterval(radarTimer);
+  }
+
+  radarTimer =
+    setInterval(() => {
+
+      radarIndex++;
+
+      if (
+        radarIndex >= radarFrames.length
+      ) {
+        radarIndex = 0;
+      }
+
+      showRadarFrame();
+
+    }, 700);
+
+}
+
+
+/*
+Load radar.
+*/
+
+loadRadar();
             } catch (geometryError) {
 
               console.log(
