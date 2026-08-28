@@ -933,22 +933,14 @@
       "Zoom level not supported" problem.
     */
 
-    const map = L.map("map", {
-
-      minZoom: 3,
-
-      maxZoom: 10,
-
-      zoomControl: true
-
-    }).setView(
-
-      [LAT, LON],
-
-      10
-
-    );
-
+  const map = L.map("map", {
+  minZoom: 6,
+  maxZoom: 12,
+  zoomControl: true
+}).setView(
+  [LAT, LON],
+  10
+);
 
     /* Base map */
 
