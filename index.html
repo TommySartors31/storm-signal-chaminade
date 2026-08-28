@@ -922,18 +922,11 @@
     };
 
 
-    /* =========================================================
-       MAP
-    ========================================================= */
+   /* =========================================================
+   MAP
+========================================================= */
 
-    /*
-      RainViewer does not support unlimited zoom levels.
-
-      Keeping Leaflet inside this range prevents the
-      "Zoom level not supported" problem.
-    */
-
-  const map = L.map("map", {
+const map = L.map("map", {
   minZoom: 6,
   maxZoom: 12,
   zoomControl: true
@@ -942,246 +935,160 @@
   10
 );
 
-    /* Base map */
 
-    L.tileLayer(
+/* Base map */
 
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+L.tileLayer(
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {
+    minZoom: 6,
+    maxZoom: 12,
+    attribution:
+      "&copy; OpenStreetMap contributors"
+  }
+).addTo(map);
 
-      {
 
-        minZoom: 3,
+/* Chaminade marker */
 
-        maxZoom: 19,
+const chaminadeMarker =
+  L.marker([LAT, LON])
+    .addTo(map)
+    .bindPopup(
+      "<b>Chaminade</b><br>StormSignal home area"
+    );
 
-        attribution:
-          "&copy; OpenStreetMap contributors"
 
-      }
+/* =========================================================
+   RADAR
+========================================================= */
 
-    ).addTo(map);
+let radarFrames = [];
+let radarIndex = 0;
+let radarLayer = null;
+let radarTimer = null;
+let radarPlaying = false;
 
 
-    /* Chaminade marker */
+async function loadRadar() {
 
-    const chaminadeMarker =
+  const status =
+    document.getElementById("radarStatus");
 
-      L.marker([LAT, LON])
+  try {
 
-        .addTo(map)
+    status.textContent = "● LOADING";
+    status.style.color = "#e08a00";
 
-        .bindPopup(
+    const response = await fetch(
+      "https://api.rainviewer.com/public/weather-maps.json"
+    );
 
-          "<b>Chaminade</b><br>StormSignal home area"
-
-        );
-
-
-    /* =========================================================
-       RADAR
-    ========================================================= */
-
-    let radarFrames = [];
-
-    let radarIndex = 0;
-
-    let radarLayer = null;
-
-    let radarTimer = null;
-
-    let radarPlaying = false;
-
-
-    /* Load radar frames */
-
-    async function loadRadar() {
-
-      const status =
-        document.getElementById("radarStatus");
-
-      try {
-
-        status.textContent = "● LOADING";
-
-        status.style.color = "#e08a00";
-
-
-        const response =
-
-          await fetch(
-
-            "https://api.rainviewer.com/public/weather-maps.json"
-
-          );
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            `Radar API returned ${response.status}`
-          );
-
-        }
-
-
-        const data =
-          await response.json();
-
-
-        radarFrames =
-          data.radar?.past || [];
-
-
-        if (!radarFrames.length) {
-
-          throw new Error(
-            "No radar frames available"
-          );
-
-        }
-
-
-        radarIndex =
-          radarFrames.length - 1;
-
-
-        showRadarFrame();
-
-
-        status.textContent = "● LIVE";
-
-        status.style.color = "#19a34a";
-
-
-        console.log(
-          "StormSignal radar:",
-          radarFrames.length,
-          "frames"
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "StormSignal radar error:",
-          error
-        );
-
-
-        status.textContent =
-          "● RADAR ERROR";
-
-        status.style.color =
-          "#e31818";
-
-      }
-
+    if (!response.ok) {
+      throw new Error(
+        `Radar API returned ${response.status}`
+      );
     }
 
+    const data = await response.json();
 
-    /* =========================================================
-       DISPLAY RADAR FRAME
-    ========================================================= */
+    radarFrames =
+      data.radar?.past || [];
 
-    function showRadarFrame() {
+    if (!radarFrames.length) {
+      throw new Error(
+        "No radar frames available"
+      );
+    }
 
-      if (!radarFrames.length) {
+    radarIndex =
+      radarFrames.length - 1;
 
-        return;
+    showRadarFrame();
 
-      }
+    status.textContent = "● LIVE";
+    status.style.color = "#19a34a";
+
+  } catch (error) {
+
+    console.error(
+      "StormSignal radar error:",
+      error
+    );
+
+    status.textContent =
+      "● RADAR ERROR";
+
+    status.style.color =
+      "#e31818";
+  }
+}
 
 
-      const frame =
-        radarFrames[radarIndex];
+function showRadarFrame() {
 
+  if (!radarFrames.length) {
+    return;
+  }
+
+  const frame =
+    radarFrames[radarIndex];
+
+  const tileURL =
+    `https://tilecache.rainviewer.com` +
+    `${frame.path}` +
+    `/256/{z}/{x}/{y}/2/1_1.png`;
+
+
+  if (radarLayer) {
+    map.removeLayer(radarLayer);
+  }
+
+
+  radarLayer = L.tileLayer(
+    tileURL,
+    {
+      opacity: 0.68,
+
+      tileSize: 256,
+
+      minZoom: 6,
+
+      maxZoom: 12,
 
       /*
-        RainViewer radar tile.
+       * RainViewer radar tiles are only
+       * requested natively through zoom 10.
+       *
+       * Leaflet scales them above that.
+       */
+      maxNativeZoom: 10,
 
-        The important fix is the explicit
-        minZoom/maxZoom configuration.
-      */
+      zIndex: 400,
 
-      const tileURL =
-
-        `https://tilecache.rainviewer.com` +
-        `${frame.path}` +
-        `/256/{z}/{x}/{y}/2/1_1.png`;
-
-
-      /* Remove previous radar layer */
-
-      if (radarLayer) {
-
-        map.removeLayer(
-          radarLayer
-        );
-
-      }
-
-
-      /* Create radar layer */
-
-      radarLayer =
-
-        L.tileLayer(
-
-          tileURL,
-
-          {
-
-            opacity: 0.68,
-
-            tileSize: 256,
-
-            minZoom: 3,
-
-            maxZoom: 10,
-
-            maxNativeZoom: 10,
-
-            zIndex: 400,
-
-            attribution:
-              "Radar © RainViewer"
-
-          }
-
-        );
-
-
-      radarLayer.addTo(map);
-
-
-      /* Timestamp */
-
-      const timestamp =
-        frame.time * 1000;
-
-
-      document.getElementById(
-        "radarTime"
-      ).textContent =
-
-        new Date(
-          timestamp
-        ).toLocaleString(
-
-          [],
-
-          {
-
-            hour: "numeric",
-
-            minute: "2-digit"
-
-          }
-
-        );
-
+      attribution:
+        "Radar © RainViewer"
     }
+  );
 
+
+  radarLayer.addTo(map);
+
+
+  const timestamp =
+    frame.time * 1000;
+
+  document.getElementById(
+    "radarTime"
+  ).textContent =
+    new Date(timestamp).toLocaleString(
+      [],
+      {
+        hour: "numeric",
+        minute: "2-digit"
+      }
+    );
+}
 
     /* =========================================================
        RADAR CONTROLS
