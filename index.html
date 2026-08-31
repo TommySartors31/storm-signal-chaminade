@@ -1,1884 +1,1525 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>StormSignal | Chaminade Weather</title>
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  >
-
-  <style>
-    :root {
-      --red: #e31818;
-      --red-dark: #b90f0f;
-      --red-light: #fff1f1;
-      --white: #ffffff;
-      --black: #111111;
-      --gray-1: #f5f5f5;
-      --gray-2: #e5e5e5;
-      --gray-3: #777777;
-      --shadow: 0 8px 30px rgba(0,0,0,.08);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
-
-      background: #f6f6f6;
-      color: var(--black);
-    }
-
-    button {
-      font-family: inherit;
-    }
-
-    /* =========================
-       HEADER
-    ========================= */
-
-    header {
-      height: 76px;
-      background: white;
-      border-bottom: 3px solid var(--red);
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-
-      padding: 0 28px;
-
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 13px;
-    }
-
-    .logo {
-      width: 52px;
-      height: 52px;
-      object-fit: contain;
-    }
-
-    .brand-text h1 {
-      font-size: 22px;
-      font-weight: 850;
-      letter-spacing: 1.4px;
-      line-height: 1;
-    }
-
-    .brand-text p {
-      margin-top: 5px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: var(--red);
-    }
-
-    .live-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      font-size: 12px;
-      font-weight: 700;
-      color: #555;
-    }
-
-    .live-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: #19a34a;
-      box-shadow: 0 0 0 4px #e7f8ec;
-    }
-
-    /* =========================
-       PAGE
-    ========================= */
-
-    main {
-      width: min(1450px, calc(100% - 36px));
-      margin: 0 auto;
-      padding: 28px 0 40px;
-    }
-
-    .page-heading {
-      margin-bottom: 22px;
-    }
-
-    .page-heading h2 {
-      font-size: 30px;
-      font-weight: 800;
-      letter-spacing: -.5px;
-    }
-
-    .page-heading p {
-      color: var(--gray-3);
-      margin-top: 5px;
-      font-size: 14px;
-    }
-
-    /* =========================
-       CARDS
-    ========================= */
-
-    .card {
-      background: white;
-      border-radius: 16px;
-      border: 1px solid #e4e4e4;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .card-header {
-      min-height: 58px;
-      padding: 0 18px;
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-
-      border-bottom: 1px solid var(--gray-2);
-    }
-
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: .3px;
-    }
-
-    .card-title-icon {
-      color: var(--red);
-      font-size: 17px;
-    }
-
-    /* =========================
-       RADAR
-    ========================= */
-
-    .radar-card {
-      margin-bottom: 20px;
-    }
-
-    #map {
-      width: 100%;
-      height: 610px;
-      background: white;
-    }
-
-    /*
-      IMPORTANT:
-      Prevent Leaflet from displaying anything
-      outside our supported zoom range.
-    */
-
-    .leaflet-container {
-      background: white !important;
-    }
-
-    .radar-controls {
-      min-height: 66px;
-
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      padding: 12px 16px;
-
-      border-top: 1px solid var(--gray-2);
-      background: white;
-    }
-
-    .radar-button {
-      height: 38px;
-      min-width: 38px;
-
-      border: 1px solid #d7d7d7;
-      border-radius: 9px;
-
-      background: white;
-      color: #222;
-
-      cursor: pointer;
-
-      font-size: 15px;
-      font-weight: 700;
-
-      transition: .15s ease;
-    }
-
-    .radar-button:hover {
-      border-color: var(--red);
-      color: var(--red);
-    }
-
-    .radar-button.play {
-      background: var(--red);
-      color: white;
-      border-color: var(--red);
-      padding: 0 15px;
-    }
-
-    .radar-button.play:hover {
-      background: var(--red-dark);
-    }
-
-    .radar-time {
-      margin-left: auto;
-      text-align: right;
-    }
-
-    .radar-time-label {
-      font-size: 10px;
-      color: #888;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-    }
-
-    .radar-time-value {
-      font-size: 13px;
-      font-weight: 750;
-      margin-top: 2px;
-    }
-
-    .radar-legend {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-
-      padding: 10px 16px;
-
-      border-top: 1px solid var(--gray-2);
-      background: #fafafa;
-
-      font-size: 10px;
-      color: #666;
-    }
-
-    .legend-gradient {
-      width: 180px;
-      height: 8px;
-      border-radius: 99px;
-
-      background:
-        linear-gradient(
-          90deg,
-          #4ade80,
-          #facc15,
-          #fb923c,
-          #ef4444,
-          #c026d3
-        );
-    }
-
-    /* =========================
-       WEATHER GRID
-    ========================= */
-
-    .top-grid {
-      display: grid;
-      grid-template-columns: 1.35fr .65fr;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-
-    .current-body {
-      padding: 24px;
-    }
-
-    .current-main {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .current-temp {
-      font-size: 62px;
-      line-height: 1;
-      font-weight: 850;
-      letter-spacing: -3px;
-    }
-
-    .current-condition {
-      font-size: 18px;
-      font-weight: 650;
-    }
-
-    .current-location {
-      color: #888;
-      font-size: 12px;
-      margin-top: 5px;
-    }
-
-    .weather-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 26px;
-    }
-
-    .weather-stat {
-      background: #fafafa;
-      border: 1px solid #e7e7e7;
-      border-radius: 11px;
-      padding: 13px;
-    }
-
-    .weather-stat-label {
-      color: #888;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .6px;
-    }
-
-    .weather-stat-value {
-      margin-top: 6px;
-      font-size: 15px;
-      font-weight: 800;
-    }
-
-    /* =========================
-       ALERTS
-    ========================= */
-
-    .alerts-body {
-      max-height: 285px;
-      overflow-y: auto;
-    }
-
-    .no-alerts {
-      padding: 38px 20px;
-      text-align: center;
-      color: #777;
-      font-size: 13px;
-    }
-
-    .alert {
-      padding: 15px 17px;
-      border-bottom: 1px solid #eeeeee;
-      border-left: 4px solid var(--red);
-      background: white;
-    }
-
-    .alert:last-child {
-      border-bottom: none;
-    }
-
-    .alert-event {
-      color: var(--red);
-      font-size: 13px;
-      font-weight: 850;
-    }
-
-    .alert-headline {
-      margin-top: 5px;
-      font-size: 12px;
-      line-height: 1.4;
-      color: #444;
-    }
-
-    .alert-expires {
-      margin-top: 8px;
-      font-size: 10px;
-      color: #888;
-      font-weight: 650;
-    }
-
-    /* =========================
-       FORECAST
-    ========================= */
-
-    .forecast-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-    }
-
-    .forecast-day {
-      min-height: 160px;
-      padding: 18px 10px;
-      text-align: center;
-      border-right: 1px solid #eeeeee;
-    }
-
-    .forecast-day:last-child {
-      border-right: none;
-    }
-
-    .forecast-name {
-      color: #777;
-      font-size: 11px;
-      font-weight: 750;
-      text-transform: uppercase;
-    }
-
-    .forecast-icon {
-      font-size: 32px;
-      margin: 15px 0 9px;
-    }
-
-    .forecast-temp {
-      font-size: 22px;
-      font-weight: 850;
-    }
-
-    .forecast-description {
-      margin-top: 7px;
-      color: #777;
-      font-size: 10px;
-      line-height: 1.35;
-    }
-
-    /* =========================
-       FOOTER
-    ========================= */
-
-    footer {
-      padding: 25px;
-      text-align: center;
-
-      color: #999;
-      font-size: 11px;
-    }
-
-    footer strong {
-      color: var(--red);
-    }
-
-    /* =========================
-       LEAFLET
-    ========================= */
-
-    .leaflet-control-zoom {
-      border: 1px solid #ddd !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,.12) !important;
-    }
-
-    .leaflet-control-zoom a {
-      color: var(--red) !important;
-      background: white !important;
-      border-color: #ddd !important;
-    }
-
-    .leaflet-control-zoom a:hover {
-      color: white !important;
-      background: var(--red) !important;
-    }
-
-    .leaflet-control-attribution {
-      font-size: 9px;
-    }
-
-    /* =========================
-       MOBILE
-    ========================= */
-
-    @media (max-width: 1000px) {
-
-      .top-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .weather-stats {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      #map {
-        height: 500px;
-      }
-
-      .forecast-grid {
-        overflow-x: auto;
-        grid-template-columns: repeat(7, 115px);
-      }
-    }
-
-    @media (max-width: 600px) {
-
-      header {
-        height: 68px;
-        padding: 0 15px;
-      }
-
-      .logo {
-        width: 43px;
-        height: 43px;
-      }
-
-      .brand-text h1 {
-        font-size: 18px;
-      }
-
-      .brand-text p {
-        font-size: 8px;
-      }
-
-      .live-status {
-        font-size: 0;
-      }
-
-      .live-dot {
-        width: 10px;
-        height: 10px;
-      }
-
-      main {
-        width: min(100% - 20px, 1450px);
-        padding-top: 18px;
-      }
-
-      .page-heading h2 {
-        font-size: 24px;
-      }
-
-      #map {
-        height: 420px;
-      }
-
-      .radar-controls {
-        flex-wrap: wrap;
-      }
-
-      .radar-time {
-        width: 100%;
-        text-align: left;
-        margin-left: 0;
-      }
-
-      .legend-gradient {
-        width: 120px;
-      }
-
-      .current-main {
-        align-items: flex-start;
-      }
-
-      .current-temp {
-        font-size: 52px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>StormSignal | Chaminade Weather</title>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+:root {
+  --red: #e31818;
+  --dark-red: #b90f0f;
+  --white: #fff;
+  --black: #111;
+  --gray: #777;
+  --light: #f6f6f6;
+  --border: #e5e5e5;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+
+  background: var(--light);
+  color: var(--black);
+}
+
+/* =========================
+   HEADER
+========================= */
+
+header {
+  height: 72px;
+  background: white;
+  border-bottom: 3px solid var(--red);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 28px;
+
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.brand h1 {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.brand p {
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--red);
+}
+
+.live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+}
+
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #18a34a;
+  box-shadow: 0 0 0 4px #e9f8ee;
+}
+
+/* =========================
+   MAIN
+========================= */
+
+main {
+  width: min(1450px, calc(100% - 36px));
+  margin: auto;
+  padding: 28px 0 45px;
+}
+
+.heading {
+  margin-bottom: 20px;
+}
+
+.heading h2 {
+  font-size: 30px;
+  font-weight: 850;
+}
+
+.heading p {
+  margin-top: 5px;
+  color: var(--gray);
+  font-size: 14px;
+}
+
+/* =========================
+   CARDS
+========================= */
+
+.card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 25px rgba(0,0,0,.06);
+}
+
+.card-title {
+  height: 56px;
+  padding: 0 18px;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  border-bottom: 1px solid var(--border);
+
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.card-title span {
+  color: var(--red);
+}
+
+/* =========================
+   RADAR
+========================= */
+
+#map {
+  width: 100%;
+  height: 570px;
+  background: white;
+}
+
+/*
+  Keep Leaflet itself white.
+*/
+.leaflet-container {
+  background: white !important;
+}
+
+/*
+  RED / WHITE ZOOM BUTTONS
+*/
+.leaflet-control-zoom {
+  border: 1px solid #ddd !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15) !important;
+}
+
+.leaflet-control-zoom a {
+  background: white !important;
+  color: var(--red) !important;
+  border-color: #ddd !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--red) !important;
+  color: white !important;
+}
+
+/* =========================
+   RADAR CONTROLS
+========================= */
+
+.radar-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  padding: 12px 16px;
+
+  border-top: 1px solid var(--border);
+}
+
+.radar-button {
+  height: 38px;
+  min-width: 38px;
+
+  padding: 0 12px;
+
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+
+  background: white;
+  color: #222;
+
+  cursor: pointer;
+
+  font-weight: 750;
+}
+
+.radar-button:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.radar-button.play {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+}
+
+.radar-button.play:hover {
+  background: var(--dark-red);
+}
+
+.radar-time {
+  margin-left: auto;
+  text-align: right;
+}
+
+.radar-time small {
+  display: block;
+  color: #999;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.radar-time strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 10px 16px;
+
+  border-top: 1px solid var(--border);
+
+  color: #777;
+  font-size: 10px;
+}
+
+.legend-bar {
+  width: 170px;
+  height: 8px;
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #4ade80,
+      #facc15,
+      #fb923c,
+      #ef4444,
+      #c026d3
+    );
+}
+
+/* =========================
+   CURRENT / ALERTS
+========================= */
+
+.two-column {
+  display: grid;
+  grid-template-columns: 1.3fr .7fr;
+  gap: 20px;
+}
+
+.current {
+  padding: 24px;
+}
+
+.current-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.temperature {
+  font-size: 62px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -3px;
+}
+
+.condition {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.location {
+  margin-top: 5px;
+  color: #888;
+  font-size: 12px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.stat {
+  padding: 13px;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+}
+
+.stat-label {
+  color: #888;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.alerts {
+  max-height: 285px;
+  overflow-y: auto;
+}
+
+.no-alerts {
+  padding: 38px 20px;
+  text-align: center;
+  color: #777;
+  font-size: 13px;
+}
+
+.alert {
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+  border-left: 4px solid var(--red);
+}
+
+.alert:last-child {
+  border-bottom: none;
+}
+
+.alert-event {
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.alert-headline {
+  margin-top: 5px;
+  color: #444;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.alert-expires {
+  margin-top: 7px;
+  color: #999;
+  font-size: 10px;
+}
+
+/* =========================
+   HOURLY FORECAST
+========================= */
+
+.hourly-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--border);
+}
+
+.hourly {
+  display: flex;
+  min-width: max-content;
+}
+
+.hour {
+  width: 105px;
+  min-height: 190px;
+
+  padding: 17px 9px;
+
+  text-align: center;
+
+  border-right: 1px solid #eee;
+}
+
+.hour:first-child {
+  background: var(--red-light);
+}
+
+.hour:last-child {
+  border-right: none;
+}
+
+.hour-time {
+  font-size: 11px;
+  font-weight: 850;
+  color: #555;
+}
+
+.hour-temp {
+  margin-top: 12px;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.hour-icon {
+  margin: 8px 0;
+  font-size: 28px;
+}
+
+.hour-condition {
+  height: 30px;
+  color: #777;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.hour-rain {
+  margin-top: 9px;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.hour-wind {
+  margin-top: 7px;
+  color: #777;
+  font-size: 10px;
+}
+
+.hourly-note {
+  padding: 10px 15px;
+  color: #999;
+  font-size: 10px;
+}
+
+/* =========================
+   7 DAY
+========================= */
+
+.forecast {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.forecast-day {
+  min-height: 160px;
+  padding: 18px 10px;
+
+  text-align: center;
+
+  border-right: 1px solid #eee;
+}
+
+.forecast-day:last-child {
+  border-right: none;
+}
+
+.forecast-name {
+  color: #777;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.forecast-icon {
+  margin: 15px 0 8px;
+  font-size: 30px;
+}
+
+.forecast-temp {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.forecast-description {
+  margin-top: 7px;
+  color: #777;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer {
+  padding: 25px;
+  text-align: center;
+  color: #999;
+  font-size: 10px;
+}
+
+footer strong {
+  color: var(--red);
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width: 1000px) {
+
+  .two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #map {
+    height: 470px;
+  }
+
+  .forecast {
+    overflow-x: auto;
+    grid-template-columns: repeat(7, 115px);
+  }
+}
+
+@media(max-width: 600px) {
+
+  header {
+    height: 65px;
+    padding: 0 14px;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+
+  .brand p {
+    font-size: 7px;
+  }
+
+  .live {
+    font-size: 0;
+  }
+
+  main {
+    width: calc(100% - 20px);
+    padding-top: 18px;
+  }
+
+  .heading h2 {
+    font-size: 24px;
+  }
+
+  #map {
+    height: 400px;
+  }
+
+  .radar-controls {
+    flex-wrap: wrap;
+  }
+
+  .radar-time {
+    width: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .temperature {
+    font-size: 50px;
+  }
+}
+</style>
 </head>
 
 <body>
 
-  <!-- HEADER -->
+<header>
 
-  <header>
+  <div class="brand">
 
-    <div class="brand">
+    <img
+      src="logo.png"
+      class="logo"
+      alt="StormSignal"
+    >
 
-      <img
-        src="logo.png"
-        class="logo"
-        alt="StormSignal logo"
+    <div>
+      <h1>STORMSIGNAL</h1>
+      <p>CHAMINADE • ST. LOUIS</p>
+    </div>
+
+  </div>
+
+  <div class="live">
+    <span class="live-dot"></span>
+    LIVE WEATHER
+  </div>
+
+</header>
+
+
+<main>
+
+  <div class="heading">
+    <h2>Chaminade Weather</h2>
+    <p>Live radar, hourly conditions, forecasts and severe weather.</p>
+  </div>
+
+
+  <!-- =========================
+       RADAR
+  ========================= -->
+
+  <section class="card">
+
+    <div class="card-title">
+      <span>📡</span>
+      LIVE RADAR
+
+      <span
+        id="radarStatus"
+        style="
+          margin-left:auto;
+          color:#19a34a;
+          font-size:10px;
+        "
       >
+        ● LIVE
+      </span>
+    </div>
 
-      <div class="brand-text">
+    <div id="map"></div>
 
-        <h1>STORMSIGNAL</h1>
+    <div class="radar-controls">
 
-        <p>CHAMINADE • ST. LOUIS</p>
+      <button
+        class="radar-button"
+        id="previousRadar"
+      >
+        ‹
+      </button>
+
+      <button
+        class="radar-button play"
+        id="playRadar"
+      >
+        ▶ Play
+      </button>
+
+      <button
+        class="radar-button"
+        id="nextRadar"
+      >
+        ›
+      </button>
+
+      <button
+        class="radar-button"
+        id="latestRadar"
+      >
+        Latest
+      </button>
+
+      <div class="radar-time">
+
+        <small>Radar time</small>
+
+        <strong id="radarTime">
+          Loading...
+        </strong>
 
       </div>
 
     </div>
 
-    <div class="live-status">
+    <div class="legend">
 
-      <span class="live-dot"></span>
+      <span>Light</span>
 
-      LIVE WEATHER
+      <div class="legend-bar"></div>
 
-    </div>
+      <span>Heavy</span>
 
-  </header>
-
-
-  <!-- MAIN -->
-
-  <main>
-
-    <div class="page-heading">
-
-      <h2>Chaminade Weather</h2>
-
-      <p>
-        Live radar, current conditions, forecasts and severe weather.
-      </p>
+      <span>Reflectivity</span>
 
     </div>
 
+  </section>
 
-    <!-- RADAR -->
 
-    <section class="card radar-card">
+  <!-- =========================
+       CURRENT + ALERTS
+  ========================= -->
 
-      <div class="card-header">
-
-        <div class="card-title">
-
-          <span class="card-title-icon">📡</span>
-
-          LIVE RADAR
-
-        </div>
-
-        <span
-          id="radarStatus"
-          style="
-            color:#19a34a;
-            font-size:10px;
-            font-weight:800;
-          "
-        >
-          ● LIVE
-        </span>
-
-      </div>
-
-      <div id="map"></div>
-
-      <div class="radar-controls">
-
-        <button
-          class="radar-button"
-          id="previousRadar"
-          title="Previous radar frame"
-        >
-          ‹
-        </button>
-
-        <button
-          class="radar-button play"
-          id="playRadar"
-        >
-          ▶ Play
-        </button>
-
-        <button
-          class="radar-button"
-          id="nextRadar"
-          title="Next radar frame"
-        >
-          ›
-        </button>
-
-        <button
-          class="radar-button"
-          id="latestRadar"
-        >
-          Latest
-        </button>
-
-        <div class="radar-time">
-
-          <div class="radar-time-label">
-            Radar time
-          </div>
-
-          <div
-            class="radar-time-value"
-            id="radarTime"
-          >
-            Loading...
-          </div>
-
-        </div>
-
-      </div>
-
-      <div class="radar-legend">
-
-        <span>Light</span>
-
-        <div class="legend-gradient"></div>
-
-        <span>Heavy</span>
-
-        <span style="margin-left:5px;">
-          Reflectivity
-        </span>
-
-      </div>
-
-    </section>
-
-
-    <!-- CURRENT + ALERTS -->
-
-    <div class="top-grid">
-
-      <!-- CURRENT CONDITIONS -->
-
-      <section class="card">
-
-        <div class="card-header">
-
-          <div class="card-title">
-
-            <span class="card-title-icon">🌡️</span>
-
-            CURRENT CONDITIONS
-
-          </div>
-
-        </div>
-
-        <div class="current-body">
-
-          <div class="current-main">
-
-            <div
-              class="current-temp"
-              id="temperature"
-            >
-              --
-            </div>
-
-            <div>
-
-              <div
-                class="current-condition"
-                id="condition"
-              >
-                Loading...
-              </div>
-
-              <div class="current-location">
-                Chaminade • St. Louis, Missouri
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="weather-stats">
-
-            <div class="weather-stat">
-
-              <div class="weather-stat-label">
-                Feels Like
-              </div>
-
-              <div
-                class="weather-stat-value"
-                id="feels"
-              >
-                --
-              </div>
-
-            </div>
-
-            <div class="weather-stat">
-
-              <div class="weather-stat-label">
-                Wind
-              </div>
-
-              <div
-                class="weather-stat-value"
-                id="wind"
-              >
-                --
-              </div>
-
-            </div>
-
-            <div class="weather-stat">
-
-              <div class="weather-stat-label">
-                Humidity
-              </div>
-
-              <div
-                class="weather-stat-value"
-                id="humidity"
-              >
-                --
-              </div>
-
-            </div>
-
-            <div class="weather-stat">
-
-              <div class="weather-stat-label">
-                Pressure
-              </div>
-
-              <div
-                class="weather-stat-value"
-                id="pressure"
-              >
-                --
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <!-- ALERTS -->
-
-      <section class="card">
-
-        <div class="card-header">
-
-          <div class="card-title">
-
-            <span class="card-title-icon">⚠️</span>
-
-            ACTIVE ALERTS
-
-          </div>
-
-        </div>
-
-        <div
-          class="alerts-body"
-          id="alerts"
-        >
-
-          <div class="no-alerts">
-            Loading alerts...
-          </div>
-
-        </div>
-
-      </section>
-
-    </div>
-
-
-    <!-- FORECAST -->
+  <div class="two-column">
 
     <section class="card">
 
-      <div class="card-header">
+      <div class="card-title">
+        <span>🌡️</span>
+        CURRENT CONDITIONS
+      </div>
 
-        <div class="card-title">
+      <div class="current">
 
-          <span class="card-title-icon">🌦️</span>
+        <div class="current-main">
 
-          7-DAY FORECAST
+          <div
+            class="temperature"
+            id="temperature"
+          >
+            --
+          </div>
+
+          <div>
+
+            <div
+              class="condition"
+              id="condition"
+            >
+              Loading...
+            </div>
+
+            <div class="location">
+              Chaminade • St. Louis, Missouri
+            </div>
+
+          </div>
 
         </div>
 
-      </div>
+        <div class="stats">
 
-      <div
-        class="forecast-grid"
-        id="forecast"
-      >
+          <div class="stat">
+            <div class="stat-label">
+              Feels Like
+            </div>
 
-        <div class="no-alerts">
-          Loading forecast...
+            <div
+              class="stat-value"
+              id="feels"
+            >
+              --
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">
+              Wind
+            </div>
+
+            <div
+              class="stat-value"
+              id="wind"
+            >
+              --
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">
+              Humidity
+            </div>
+
+            <div
+              class="stat-value"
+              id="humidity"
+            >
+              --
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-label">
+              Pressure
+            </div>
+
+            <div
+              class="stat-value"
+              id="pressure"
+            >
+              --
+            </div>
+          </div>
+
         </div>
 
       </div>
 
     </section>
 
-  </main>
+
+    <section class="card">
+
+      <div class="card-title">
+        <span>⚠️</span>
+        ACTIVE ALERTS
+      </div>
+
+      <div
+        class="alerts"
+        id="alerts"
+      >
+        <div class="no-alerts">
+          Loading alerts...
+        </div>
+      </div>
+
+    </section>
+
+  </div>
 
 
-  <!-- FOOTER -->
+  <!-- =========================
+       24 HOUR FORECAST
+  ========================= -->
 
-  <footer>
+  <section class="card">
 
-    <strong>StormSignal</strong>
-    • Weather data from the National Weather Service / NOAA
-    • Radar imagery from RainViewer
+    <div class="card-title">
 
-  </footer>
+      <span>🕐</span>
+
+      24-HOUR FORECAST
+
+      <span
+        style="
+          margin-left:auto;
+          color:#999;
+          font-size:10px;
+          font-weight:600;
+        "
+      >
+        Scroll horizontally →
+      </span>
+
+    </div>
+
+    <div class="hourly-wrapper">
+
+      <div
+        class="hourly"
+        id="hourly"
+      >
+
+        <div class="no-alerts">
+          Loading hourly forecast...
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="hourly-note">
+      Forecast data from the National Weather Service / NOAA
+    </div>
+
+  </section>
 
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- =========================
+       7 DAY FORECAST
+  ========================= -->
+
+  <section class="card">
+
+    <div class="card-title">
+
+      <span>🌦️</span>
+
+      7-DAY FORECAST
+
+    </div>
+
+    <div
+      class="forecast"
+      id="forecast"
+    >
+
+      <div class="no-alerts">
+        Loading forecast...
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
 
 
-  <script>
+<footer>
 
-    /* =========================================================
-       CONFIG
-    ========================================================= */
+  <strong>StormSignal</strong>
+  • Weather data from National Weather Service / NOAA
+  • Radar imagery from RainViewer
+  • Chaminade • St. Louis
 
-    const LAT = 38.6273;
-    const LON = -90.3390;
-
-    /*
-      THIS IS THE IMPORTANT PART.
-
-      RainViewer's radar tiles work reliably through
-      zoom 10 in this setup.
-
-      The Leaflet map itself is ALSO locked to 10.
-    */
-
-    const MAP_MIN_ZOOM = 7;
-    const MAP_MAX_ZOOM = 10;
-
-    const NWS_HEADERS = {
-      "User-Agent": "StormSignal/1.0"
-    };
+</footer>
 
 
-    /* =========================================================
-       MAP
-    ========================================================= */
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    const map = L.map("map", {
+<script>
 
-      center: [LAT, LON],
+/* =========================================================
+   CONFIG
+========================================================= */
 
-      zoom: 10,
+const LAT = 38.6273;
+const LON = -90.3390;
+
+/*
+  HARD MAP LIMITS.
+
+  Zoom 10 is the absolute maximum.
+  Users cannot scroll, double-click, or press "+"
+  beyond this level.
+*/
+
+const MAP_MIN_ZOOM = 7;
+const MAP_MAX_ZOOM = 10;
+
+const NWS_HEADERS = {
+  "User-Agent": "StormSignal/1.0"
+};
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+const map = L.map("map", {
+
+  center: [LAT, LON],
+
+  zoom: 10,
+
+  minZoom: MAP_MIN_ZOOM,
+
+  maxZoom: MAP_MAX_ZOOM,
+
+  zoomControl: true,
+
+  zoomSnap: 1,
+
+  zoomDelta: 1,
+
+  scrollWheelZoom: true,
+
+  doubleClickZoom: true,
+
+  touchZoom: true,
+
+  boxZoom: true,
+
+  keyboard: true,
+
+  worldCopyJump: false
+
+});
+
+
+/*
+  SIMPLE NORMAL STREET MAP.
+
+  This is OpenStreetMap.
+
+  There is NO satellite layer.
+  There is NO satellite imagery.
+  There is NO API key.
+*/
+
+L.tileLayer(
+
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+
+  {
+
+    minZoom: MAP_MIN_ZOOM,
+
+    maxZoom: MAP_MAX_ZOOM,
+
+    maxNativeZoom: MAP_MAX_ZOOM,
+
+    noWrap: true,
+
+    attribution:
+      "&copy; OpenStreetMap contributors"
+
+  }
+
+).addTo(map);
+
+
+/*
+  Chaminade marker
+*/
+
+L.marker([LAT, LON])
+  .addTo(map)
+  .bindPopup(
+    "<b>Chaminade</b><br>StormSignal home area"
+  );
+
+
+/*
+  EXTRA ZOOM LOCK.
+
+  If anything tries to change the map
+  beyond the limits, immediately return it.
+*/
+
+map.on("zoomend", () => {
+
+  const zoom = map.getZoom();
+
+  if (zoom > MAP_MAX_ZOOM) {
+
+    map.setZoom(
+      MAP_MAX_ZOOM,
+      {
+        animate: false
+      }
+    );
+
+  }
+
+  if (zoom < MAP_MIN_ZOOM) {
+
+    map.setZoom(
+      MAP_MIN_ZOOM,
+      {
+        animate: false
+      }
+    );
+
+  }
+
+});
+
+
+/* =========================================================
+   RADAR
+========================================================= */
+
+let radarFrames = [];
+
+let radarIndex = 0;
+
+let radarLayer = null;
+
+let radarTimer = null;
+
+let radarPlaying = false;
+
+
+async function loadRadar() {
+
+  const status =
+    document.getElementById("radarStatus");
+
+  try {
+
+    status.textContent = "● LOADING";
+    status.style.color = "#e08a00";
+
+
+    const response = await fetch(
+      "https://api.rainviewer.com/public/weather-maps.json"
+    );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Radar API returned ${response.status}`
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    radarFrames =
+      data.radar?.past || [];
+
+
+    if (!radarFrames.length) {
+
+      throw new Error(
+        "No radar frames available"
+      );
+
+    }
+
+
+    radarIndex =
+      radarFrames.length - 1;
+
+
+    showRadarFrame();
+
+
+    status.textContent = "● LIVE";
+    status.style.color = "#19a34a";
+
+
+  } catch (error) {
+
+    console.error(
+      "StormSignal radar error:",
+      error
+    );
+
+
+    status.textContent =
+      "● RADAR ERROR";
+
+    status.style.color =
+      "#e31818";
+
+  }
+
+}
+
+
+function showRadarFrame() {
+
+  if (!radarFrames.length) {
+    return;
+  }
+
+
+  const frame =
+    radarFrames[radarIndex];
+
+
+  const tileURL =
+
+    `https://tilecache.rainviewer.com` +
+
+    `${frame.path}` +
+
+    `/256/{z}/{x}/{y}/2/1_1.png`;
+
+
+  if (radarLayer) {
+
+    map.removeLayer(
+      radarLayer
+    );
+
+  }
+
+
+  radarLayer = L.tileLayer(
+
+    tileURL,
+
+    {
+
+      opacity: 0.68,
+
+      tileSize: 256,
 
       minZoom: MAP_MIN_ZOOM,
 
       maxZoom: MAP_MAX_ZOOM,
 
-      zoomControl: true,
-
-      zoomSnap: 1,
-
-      zoomDelta: 1,
-
-      wheelDebounceTime: 40,
-
-      wheelPxPerZoomLevel: 120,
-
       /*
-        Prevent horizontal world wrapping.
+        Native radar tiles stop here.
+        Leaflet will NEVER request zoom 11+.
       */
 
-      worldCopyJump: false
+      maxNativeZoom: MAP_MAX_ZOOM,
 
-    });
+      noWrap: true,
+
+      zIndex: 400,
+
+      updateWhenZooming: false,
+
+      updateWhenIdle: true,
+
+      attribution:
+        "Radar © RainViewer"
+
+    }
+
+  );
 
 
-    /*
-      ==========================================================
-      BASE MAP
+  radarLayer.addTo(map);
 
-      THIS IS NOT SATELLITE.
 
-      It is the normal OpenStreetMap street map.
+  const timestamp =
+    frame.time * 1000;
 
-      There is NO Esri satellite layer.
-      There is NO Google satellite layer.
-      There is NO CARTO API.
-      ==========================================================
-    */
 
-    const baseMap = L.tileLayer(
+  document.getElementById(
+    "radarTime"
+  ).textContent =
 
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    new Date(timestamp)
+      .toLocaleString(
+        [],
+        {
+          hour: "numeric",
+          minute: "2-digit"
+        }
+      );
 
-      {
+}
 
-        minZoom: MAP_MIN_ZOOM,
 
-        maxZoom: MAP_MAX_ZOOM,
+/* =========================================================
+   RADAR CONTROLS
+========================================================= */
 
-        maxNativeZoom: MAP_MAX_ZOOM,
+function playRadar() {
 
-        noWrap: true,
+  if (!radarFrames.length) {
+    return;
+  }
 
-        updateWhenZooming: false,
 
-        updateWhenIdle: true,
+  radarPlaying = true;
 
-        attribution:
-          "&copy; OpenStreetMap contributors"
 
-      }
+  document.getElementById(
+    "playRadar"
+  ).textContent =
+    "❚❚ Pause";
 
+
+  if (radarTimer) {
+
+    clearInterval(
+      radarTimer
     );
 
-    baseMap.addTo(map);
+  }
 
 
-    /*
-      Chaminade marker
-    */
+  radarTimer = setInterval(() => {
 
-    const chaminadeMarker =
-
-      L.marker([LAT, LON])
-
-        .addTo(map)
-
-        .bindPopup(
-          "<b>Chaminade</b><br>StormSignal home area"
-        );
+    radarIndex++;
 
 
-    /*
-      ==========================================================
-      EXTRA ZOOM SAFETY
-      ==========================================================
-    */
+    if (
+      radarIndex >=
+      radarFrames.length
+    ) {
 
-    map.on("zoomend", function () {
-
-      const currentZoom = map.getZoom();
-
-      if (currentZoom > MAP_MAX_ZOOM) {
-
-        map.setZoom(
-          MAP_MAX_ZOOM,
-          {
-            animate: false
-          }
-        );
-
-      }
-
-      if (currentZoom < MAP_MIN_ZOOM) {
-
-        map.setZoom(
-          MAP_MIN_ZOOM,
-          {
-            animate: false
-          }
-        );
-
-      }
-
-    });
-
-
-    /* =========================================================
-       RADAR
-    ========================================================= */
-
-    let radarFrames = [];
-
-    let radarIndex = 0;
-
-    let radarLayer = null;
-
-    let radarTimer = null;
-
-    let radarPlaying = false;
-
-
-    async function loadRadar() {
-
-      const status =
-        document.getElementById("radarStatus");
-
-      try {
-
-        status.textContent = "● LOADING";
-
-        status.style.color = "#e08a00";
-
-
-        const response = await fetch(
-
-          "https://api.rainviewer.com/public/weather-maps.json"
-
-        );
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            `Radar API returned ${response.status}`
-          );
-
-        }
-
-
-        const data =
-          await response.json();
-
-
-        radarFrames =
-          data.radar?.past || [];
-
-
-        if (!radarFrames.length) {
-
-          throw new Error(
-            "No radar frames available"
-          );
-
-        }
-
-
-        radarIndex =
-          radarFrames.length - 1;
-
-
-        showRadarFrame();
-
-
-        status.textContent =
-          "● LIVE";
-
-        status.style.color =
-          "#19a34a";
-
-
-      } catch (error) {
-
-        console.error(
-          "StormSignal radar error:",
-          error
-        );
-
-
-        status.textContent =
-          "● RADAR ERROR";
-
-        status.style.color =
-          "#e31818";
-
-      }
+      radarIndex = 0;
 
     }
 
 
-    function showRadarFrame() {
+    showRadarFrame();
+
+  }, 650);
+
+}
+
+
+function pauseRadar() {
+
+  radarPlaying = false;
+
+
+  document.getElementById(
+    "playRadar"
+  ).textContent =
+    "▶ Play";
+
+
+  if (radarTimer) {
+
+    clearInterval(
+      radarTimer
+    );
+
+    radarTimer = null;
+
+  }
+
+}
+
+
+/*
+  Play / pause
+*/
+
+document
+  .getElementById("playRadar")
+  .addEventListener(
+    "click",
+    () => {
+
+      if (radarPlaying) {
+
+        pauseRadar();
+
+      } else {
+
+        playRadar();
+
+      }
+
+    }
+  );
+
+
+/*
+  Previous
+*/
+
+document
+  .getElementById("previousRadar")
+  .addEventListener(
+    "click",
+    () => {
+
+      pauseRadar();
 
       if (!radarFrames.length) {
         return;
       }
 
+      radarIndex--;
 
-      const frame =
-        radarFrames[radarIndex];
+      if (radarIndex < 0) {
 
-
-      const tileURL =
-
-        `https://tilecache.rainviewer.com` +
-
-        `${frame.path}` +
-
-        `/256/{z}/{x}/{y}/2/1_1.png`;
-
-
-      /*
-        Remove old radar layer.
-      */
-
-      if (radarLayer) {
-
-        map.removeLayer(
-          radarLayer
-        );
+        radarIndex =
+          radarFrames.length - 1;
 
       }
 
+      showRadarFrame();
 
-      /*
-        IMPORTANT:
+    }
+  );
 
-        Radar is locked to the SAME maximum zoom
-        as the map.
 
-        maxNativeZoom = 10 means RainViewer's
-        native radar tiles stop at zoom 10.
-      */
+/*
+  Next
+*/
 
-      radarLayer = L.tileLayer(
+document
+  .getElementById("nextRadar")
+  .addEventListener(
+    "click",
+    () => {
 
-        tileURL,
+      pauseRadar();
+
+      if (!radarFrames.length) {
+        return;
+      }
+
+      radarIndex++;
+
+      if (
+        radarIndex >=
+        radarFrames.length
+      ) {
+
+        radarIndex = 0;
+
+      }
+
+      showRadarFrame();
+
+    }
+  );
+
+
+/*
+  Latest
+*/
+
+document
+  .getElementById("latestRadar")
+  .addEventListener(
+    "click",
+    () => {
+
+      pauseRadar();
+
+      if (!radarFrames.length) {
+        return;
+      }
+
+      radarIndex =
+        radarFrames.length - 1;
+
+      showRadarFrame();
+
+    }
+  );
+
+
+loadRadar();
+
+
+/* =========================================================
+   WEATHER
+========================================================= */
+
+async function getWeather() {
+
+  try {
+
+    /*
+      Get NWS point data.
+    */
+
+    const pointResponse =
+
+      await fetch(
+
+        `https://api.weather.gov/points/${LAT},${LON}`,
 
         {
-
-          opacity: 0.68,
-
-          tileSize: 256,
-
-          minZoom: MAP_MIN_ZOOM,
-
-          maxZoom: MAP_MAX_ZOOM,
-
-          maxNativeZoom: MAP_MAX_ZOOM,
-
-          noWrap: true,
-
-          zIndex: 400,
-
-          updateWhenZooming: false,
-
-          updateWhenIdle: true,
-
-          attribution:
-            "Radar © RainViewer"
-
+          headers:
+            NWS_HEADERS
         }
 
       );
 
 
-      radarLayer.addTo(map);
+    if (!pointResponse.ok) {
 
-
-      /*
-        Radar timestamp
-      */
-
-      const timestamp =
-        frame.time * 1000;
-
-
-      document.getElementById(
-        "radarTime"
-      ).textContent =
-
-        new Date(timestamp)
-          .toLocaleString(
-            [],
-            {
-              hour: "numeric",
-              minute: "2-digit"
-            }
-          );
+      throw new Error(
+        `NWS point error: ${pointResponse.status}`
+      );
 
     }
 
 
-    /* =========================================================
-       RADAR CONTROLS
-    ========================================================= */
-
-
-    function playRadar() {
-
-      if (!radarFrames.length) {
-        return;
-      }
-
-
-      radarPlaying = true;
-
-
-      document.getElementById(
-        "playRadar"
-      ).textContent =
-        "❚❚ Pause";
-
-
-      if (radarTimer) {
-
-        clearInterval(
-          radarTimer
-        );
-
-      }
-
-
-      radarTimer =
-
-        setInterval(
-
-          () => {
-
-            radarIndex++;
-
-
-            if (
-              radarIndex >=
-              radarFrames.length
-            ) {
-
-              radarIndex = 0;
-
-            }
-
-
-            showRadarFrame();
-
-          },
-
-          650
-
-        );
-
-    }
-
-
-    function pauseRadar() {
-
-      radarPlaying = false;
-
-
-      document.getElementById(
-        "playRadar"
-      ).textContent =
-        "▶ Play";
-
-
-      if (radarTimer) {
-
-        clearInterval(
-          radarTimer
-        );
-
-        radarTimer = null;
-
-      }
-
-    }
+    const point =
+      await pointResponse.json();
 
 
     /*
-      Play / pause
+      ======================================================
+      CURRENT CONDITIONS
+      ======================================================
     */
 
-    document.getElementById(
-      "playRadar"
-    ).addEventListener(
+    const stationsResponse =
 
-      "click",
+      await fetch(
 
-      () => {
+        point.properties.observationStations,
 
-        if (radarPlaying) {
-
-          pauseRadar();
-
-        } else {
-
-          playRadar();
-
+        {
+          headers:
+            NWS_HEADERS
         }
 
-      }
+      );
 
-    );
 
+    const stations =
+      await stationsResponse.json();
 
-    /*
-      Previous
-    */
 
-    document.getElementById(
-      "previousRadar"
-    ).addEventListener(
+    let observation = null;
 
-      "click",
 
-      () => {
-
-        pauseRadar();
-
-
-        if (!radarFrames.length) {
-          return;
-        }
-
-
-        radarIndex--;
-
-
-        if (radarIndex < 0) {
-
-          radarIndex =
-            radarFrames.length - 1;
-
-        }
-
-
-        showRadarFrame();
-
-      }
-
-    );
-
-
-    /*
-      Next
-    */
-
-    document.getElementById(
-      "nextRadar"
-    ).addEventListener(
-
-      "click",
-
-      () => {
-
-        pauseRadar();
-
-
-        if (!radarFrames.length) {
-          return;
-        }
-
-
-        radarIndex++;
-
-
-        if (
-          radarIndex >=
-          radarFrames.length
-        ) {
-
-          radarIndex = 0;
-
-        }
-
-
-        showRadarFrame();
-
-      }
-
-    );
-
-
-    /*
-      Latest
-    */
-
-    document.getElementById(
-      "latestRadar"
-    ).addEventListener(
-
-      "click",
-
-      () => {
-
-        pauseRadar();
-
-
-        if (!radarFrames.length) {
-          return;
-        }
-
-
-        radarIndex =
-          radarFrames.length - 1;
-
-
-        showRadarFrame();
-
-      }
-
-    );
-
-
-    /*
-      Load radar
-    */
-
-    loadRadar();
-
-
-    /* =========================================================
-       WEATHER
-    ========================================================= */
-
-    async function getWeather() {
-
-      try {
-
-        const pointResponse =
-
-          await fetch(
-
-            `https://api.weather.gov/points/${LAT},${LON}`,
-
-            {
-              headers:
-                NWS_HEADERS
-            }
-
-          );
-
-
-        if (!pointResponse.ok) {
-
-          throw new Error(
-            `NWS point error: ${pointResponse.status}`
-          );
-
-        }
-
-
-        const point =
-          await pointResponse.json();
-
-
-        /* =====================================================
-           CURRENT OBSERVATION
-        ===================================================== */
-
-        const stationsResponse =
-
-          await fetch(
-
-            point.properties.observationStations,
-
-            {
-              headers:
-                NWS_HEADERS
-            }
-
-          );
-
-
-        const stations =
-          await stationsResponse.json();
-
-
-        let observation = null;
-
-
-        for (
-          const station
-          of stations.features
-        ) {
-
-          try {
-
-            const response =
-
-              await fetch(
-
-                `${station.id}/observations/latest`,
-
-                {
-                  headers:
-                    NWS_HEADERS
-                }
-
-              );
-
-
-            if (!response.ok) {
-              continue;
-            }
-
-
-            const result =
-              await response.json();
-
-
-            if (
-
-              result.properties &&
-
-              result.properties.temperature &&
-
-              result.properties.temperature.value !== null
-
-            ) {
-
-              observation =
-                result.properties;
-
-              break;
-
-            }
-
-          } catch (error) {
-
-            console.log(
-              "Station failed:",
-              station.id
-            );
-
-          }
-
-        }
-
-
-        if (observation) {
-
-          const temperature =
-
-            celsiusToFahrenheit(
-
-              observation.temperature.value
-
-            );
-
-
-          const humidity =
-
-            observation.relativeHumidity?.value !== null &&
-
-            observation.relativeHumidity?.value !== undefined
-
-              ? Math.round(
-                  observation.relativeHumidity.value
-                )
-
-              : "--";
-
-
-          const wind =
-
-            observation.windSpeed?.value !== null &&
-
-            observation.windSpeed?.value !== undefined
-
-              ? Math.round(
-
-                  observation.windSpeed.value *
-
-                  0.621371
-
-                )
-
-              : "--";
-
-
-          const pressure =
-
-            observation.barometricPressure?.value !== null &&
-
-            observation.barometricPressure?.value !== undefined
-
-              ? Math.round(
-
-                  observation.barometricPressure.value /
-
-                  100
-
-                )
-
-              : "--";
-
-
-          let feels =
-            temperature;
-
-
-          if (
-
-            observation.heatIndex &&
-
-            observation.heatIndex.value !== null
-
-          ) {
-
-            feels =
-
-              celsiusToFahrenheit(
-
-                observation.heatIndex.value
-
-              );
-
-          }
-
-          else if (
-
-            observation.windChill &&
-
-            observation.windChill.value !== null
-
-          ) {
-
-            feels =
-
-              celsiusToFahrenheit(
-
-                observation.windChill.value
-
-              );
-
-          }
-
-
-          document.getElementById(
-            "temperature"
-          ).textContent =
-            `${temperature}°`;
-
-
-          document.getElementById(
-            "condition"
-          ).textContent =
-
-            observation.textDescription ||
-
-            "Unknown";
-
-
-          document.getElementById(
-            "feels"
-          ).textContent =
-            `${feels}°`;
-
-
-          document.getElementById(
-            "wind"
-          ).textContent =
-            `${wind} mph`;
-
-
-          document.getElementById(
-            "humidity"
-          ).textContent =
-            `${humidity}%`;
-
-
-          document.getElementById(
-            "pressure"
-          ).textContent =
-            `${pressure} hPa`;
-
-        }
-
-
-        /* =====================================================
-           7-DAY FORECAST
-        ===================================================== */
-
-        const forecastResponse =
-
-          await fetch(
-
-            point.properties.forecast,
-
-            {
-              headers:
-                NWS_HEADERS
-            }
-
-          );
-
-
-        const forecast =
-          await forecastResponse.json();
-
-
-        const periods =
-          forecast.properties.periods;
-
-
-        const container =
-          document.getElementById(
-            "forecast"
-          );
-
-
-        container.innerHTML = "";
-
-
-        let days = 0;
-
-
-        for (
-          const period
-          of periods
-        ) {
-
-          if (!period.isDaytime) {
-            continue;
-          }
-
-
-          if (days >= 7) {
-            break;
-          }
-
-
-          const element =
-            document.createElement("div");
-
-
-          element.className =
-            "forecast-day";
-
-
-          element.innerHTML = `
-
-            <div class="forecast-name">
-              ${period.name}
-            </div>
-
-            <div class="forecast-icon">
-              ${weatherIcon(
-                period.shortForecast
-              )}
-            </div>
-
-            <div class="forecast-temp">
-              ${period.temperature}°
-            </div>
-
-            <div class="forecast-description">
-              ${period.shortForecast}
-            </div>
-
-          `;
-
-
-          container.appendChild(
-            element
-          );
-
-
-          days++;
-
-        }
-
-
-      } catch (error) {
-
-        console.error(
-          "StormSignal weather error:",
-          error
-        );
-
-
-        document.getElementById(
-          "condition"
-        ).textContent =
-          "Weather unavailable";
-
-      }
-
-    }
-
-
-    /* =========================================================
-       ALERTS
-    ========================================================= */
-
-    let alertLayers = [];
-
-
-    async function getAlerts() {
+    for (
+      const station
+      of stations.features
+    ) {
 
       try {
 
@@ -1886,7 +1527,7 @@
 
           await fetch(
 
-            `https://api.weather.gov/alerts/active?point=${LAT},${LON}`,
+            `${station.id}/observations/latest`,
 
             {
               headers:
@@ -1897,381 +1538,834 @@
 
 
         if (!response.ok) {
-
-          throw new Error(
-            `Alert error: ${response.status}`
-          );
-
+          continue;
         }
 
 
-        const data =
+        const result =
           await response.json();
-
-
-        /*
-          Remove old alert polygons.
-        */
-
-        alertLayers.forEach(
-
-          layer => {
-
-            map.removeLayer(
-              layer
-            );
-
-          }
-
-        );
-
-
-        alertLayers = [];
-
-
-        const container =
-          document.getElementById(
-            "alerts"
-          );
-
-
-        container.innerHTML = "";
 
 
         if (
 
-          !data.features ||
+          result.properties &&
 
-          data.features.length === 0
+          result.properties.temperature &&
+
+          result.properties.temperature.value !== null
 
         ) {
 
-          container.innerHTML = `
+          observation =
+            result.properties;
 
-            <div class="no-alerts">
-
-              ✅ No active weather alerts
-              for the Chaminade area.
-
-            </div>
-
-          `;
-
-          return;
+          break;
 
         }
 
-
-        data.features.forEach(
-
-          feature => {
-
-            const props =
-              feature.properties;
-
-
-            const alert =
-              document.createElement(
-                "div"
-              );
-
-
-            alert.className =
-              "alert";
-
-
-            const expires =
-
-              props.expires
-
-                ? new Date(
-                    props.expires
-                  ).toLocaleString()
-
-                : "Unknown";
-
-
-            alert.innerHTML = `
-
-              <div class="alert-event">
-
-                ⚠️ ${
-                  props.event ||
-                  "Weather Alert"
-                }
-
-              </div>
-
-              <div class="alert-headline">
-
-                ${
-                  props.headline ||
-                  "Active weather alert."
-                }
-
-              </div>
-
-              <div class="alert-expires">
-
-                Expires: ${expires}
-
-              </div>
-
-            `;
-
-
-            container.appendChild(
-              alert
-            );
-
-
-            /*
-              Alert polygon
-            */
-
-            if (feature.geometry) {
-
-              try {
-
-                const layer =
-
-                  L.geoJSON(
-
-                    feature,
-
-                    {
-
-                      style: {
-
-                        color:
-                          "#e31818",
-
-                        weight: 3,
-
-                        fillColor:
-                          "#e31818",
-
-                        fillOpacity:
-                          .12
-
-                      }
-
-                    }
-
-                  ).addTo(map);
-
-
-                layer.bindPopup(
-
-                  `<b>${
-                    props.event ||
-                    "Weather Alert"
-                  }</b><br>${
-                    props.headline ||
-                    ""
-                  }`
-
-                );
-
-
-                alertLayers.push(
-                  layer
-                );
-
-
-              } catch (error) {
-
-                console.log(
-                  "Alert geometry error:",
-                  error
-                );
-
-              }
-
-            }
-
-          }
-
-        );
-
-
       } catch (error) {
 
-        console.error(
-          "StormSignal alert error:",
-          error
+        console.log(
+          "Station failed:",
+          station.id
         );
-
-
-        document.getElementById(
-          "alerts"
-        ).innerHTML = `
-
-          <div class="no-alerts">
-
-            Unable to load alerts.
-
-          </div>
-
-        `;
 
       }
 
     }
 
 
-    /* =========================================================
-       HELPERS
-    ========================================================= */
+    if (observation) {
 
-    function celsiusToFahrenheit(
-      celsius
-    ) {
+      const temperature =
+
+        celsiusToFahrenheit(
+          observation.temperature.value
+        );
+
+
+      const humidity =
+
+        observation.relativeHumidity?.value != null
+
+          ? Math.round(
+              observation.relativeHumidity.value
+            )
+
+          : "--";
+
+
+      const wind =
+
+        observation.windSpeed?.value != null
+
+          ? Math.round(
+              observation.windSpeed.value *
+              0.621371
+            )
+
+          : "--";
+
+
+      const pressure =
+
+        observation.barometricPressure?.value != null
+
+          ? Math.round(
+              observation.barometricPressure.value /
+              100
+            )
+
+          : "--";
+
+
+      let feels =
+        temperature;
+
 
       if (
-
-        celsius === null ||
-
-        celsius === undefined
-
+        observation.heatIndex?.value != null
       ) {
 
-        return "--";
+        feels =
+          celsiusToFahrenheit(
+            observation.heatIndex.value
+          );
+
+      }
+
+      else if (
+        observation.windChill?.value != null
+      ) {
+
+        feels =
+          celsiusToFahrenheit(
+            observation.windChill.value
+          );
 
       }
 
 
-      return Math.round(
-        celsius * 9 / 5 + 32
+      document.getElementById(
+        "temperature"
+      ).textContent =
+        `${temperature}°`;
+
+
+      document.getElementById(
+        "condition"
+      ).textContent =
+        observation.textDescription ||
+        "Unknown";
+
+
+      document.getElementById(
+        "feels"
+      ).textContent =
+        `${feels}°`;
+
+
+      document.getElementById(
+        "wind"
+      ).textContent =
+        `${wind} mph`;
+
+
+      document.getElementById(
+        "humidity"
+      ).textContent =
+        `${humidity}%`;
+
+
+      document.getElementById(
+        "pressure"
+      ).textContent =
+        `${pressure} hPa`;
+
+    }
+
+
+    /*
+      ======================================================
+      24 HOUR HOURLY FORECAST
+      ======================================================
+    */
+
+    await getHourlyForecast(
+      point.properties.forecastHourly
+    );
+
+
+    /*
+      ======================================================
+      7 DAY FORECAST
+      ======================================================
+    */
+
+    const forecastResponse =
+
+      await fetch(
+
+        point.properties.forecast,
+
+        {
+          headers:
+            NWS_HEADERS
+        }
+
+      );
+
+
+    if (!forecastResponse.ok) {
+
+      throw new Error(
+        "7-day forecast unavailable"
       );
 
     }
 
 
-    function weatherIcon(
-      text
+    const forecast =
+      await forecastResponse.json();
+
+
+    const periods =
+      forecast.properties.periods;
+
+
+    const container =
+      document.getElementById(
+        "forecast"
+      );
+
+
+    container.innerHTML = "";
+
+
+    let days = 0;
+
+
+    for (
+      const period
+      of periods
     ) {
 
-      const value =
-        text.toLowerCase();
-
-
-      if (
-        value.includes("thunder")
-      ) {
-
-        return "⛈️";
-
+      if (!period.isDaytime) {
+        continue;
       }
 
 
-      if (
-
-        value.includes("snow") ||
-
-        value.includes("blizzard")
-
-      ) {
-
-        return "❄️";
-
+      if (days >= 7) {
+        break;
       }
 
 
-      if (
-
-        value.includes("rain") ||
-
-        value.includes("shower")
-
-      ) {
-
-        return "🌧️";
-
-      }
+      const element =
+        document.createElement(
+          "div"
+        );
 
 
-      if (
-        value.includes("fog")
-      ) {
-
-        return "🌫️";
-
-      }
+      element.className =
+        "forecast-day";
 
 
-      if (
-        value.includes("cloud")
-      ) {
+      element.innerHTML = `
 
-        return "☁️";
+        <div class="forecast-name">
+          ${period.name}
+        </div>
 
-      }
+        <div class="forecast-icon">
+          ${weatherIcon(
+            period.shortForecast
+          )}
+        </div>
+
+        <div class="forecast-temp">
+          ${period.temperature}°
+        </div>
+
+        <div class="forecast-description">
+          ${period.shortForecast}
+        </div>
+
+      `;
 
 
-      if (
-
-        value.includes("sunny") ||
-
-        value.includes("clear")
-
-      ) {
-
-        return "☀️";
-
-      }
+      container.appendChild(
+        element
+      );
 
 
-      return "🌤️";
+      days++;
 
     }
 
 
-    /* =========================================================
-       START
-    ========================================================= */
+  } catch (error) {
+
+    console.error(
+      "StormSignal weather error:",
+      error
+    );
+
+
+    document.getElementById(
+      "condition"
+    ).textContent =
+      "Weather unavailable";
+
+  }
+
+}
+
+
+/* =========================================================
+   24 HOUR HOURLY FORECAST
+========================================================= */
+
+async function getHourlyForecast(
+  hourlyURL
+) {
+
+  const container =
+    document.getElementById(
+      "hourly"
+    );
+
+
+  try {
+
+    const response =
+      await fetch(
+        hourlyURL,
+        {
+          headers:
+            NWS_HEADERS
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Hourly forecast error: ${response.status}`
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const periods =
+      data.properties.periods;
+
+
+    container.innerHTML = "";
+
+
+    /*
+      Only display the next 24 hours.
+    */
+
+    const next24 =
+      periods.slice(0, 24);
+
+
+    next24.forEach(
+      (period, index) => {
+
+        const hour =
+          document.createElement(
+            "div"
+          );
+
+
+        hour.className =
+          "hour";
+
+
+        /*
+          Convert the NWS ISO timestamp
+          into the user's local display.
+        */
+
+        const date =
+          new Date(
+            period.startTime
+          );
+
+
+        let timeText;
+
+
+        if (index === 0) {
+
+          timeText = "NOW";
+
+        } else {
+
+          timeText =
+            date.toLocaleTimeString(
+              [],
+              {
+                hour: "numeric"
+              }
+            );
+
+        }
+
+
+        const precipitation =
+          period.probabilityOfPrecipitation?.value;
+
+
+        const rainChance =
+          precipitation != null
+            ? `${precipitation}%`
+            : "--";
+
+
+        const wind =
+          period.windSpeed
+            ? `${period.windSpeed}`
+            : "--";
+
+
+        hour.innerHTML = `
+
+          <div class="hour-time">
+            ${timeText}
+          </div>
+
+          <div class="hour-temp">
+            ${period.temperature}°
+          </div>
+
+          <div class="hour-icon">
+            ${weatherIcon(
+              period.shortForecast
+            )}
+          </div>
+
+          <div class="hour-condition">
+            ${period.shortForecast}
+          </div>
+
+          <div class="hour-rain">
+            💧 ${rainChance}
+          </div>
+
+          <div class="hour-wind">
+            💨 ${wind}
+          </div>
+
+        `;
+
+
+        container.appendChild(
+          hour
+        );
+
+      }
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Hourly forecast error:",
+      error
+    );
+
+
+    container.innerHTML = `
+
+      <div class="no-alerts">
+        Hourly forecast unavailable.
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   ALERTS
+========================================================= */
+
+let alertLayers = [];
+
+
+async function getAlerts() {
+
+  try {
+
+    const response =
+
+      await fetch(
+
+        `https://api.weather.gov/alerts/active?point=${LAT},${LON}`,
+
+        {
+          headers:
+            NWS_HEADERS
+        }
+
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Alert error: ${response.status}`
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    /*
+      Remove old alert polygons.
+    */
+
+    alertLayers.forEach(
+      layer => {
+
+        map.removeLayer(
+          layer
+        );
+
+      }
+    );
+
+
+    alertLayers = [];
+
+
+    const container =
+      document.getElementById(
+        "alerts"
+      );
+
+
+    container.innerHTML = "";
+
+
+    if (
+
+      !data.features ||
+
+      data.features.length === 0
+
+    ) {
+
+      container.innerHTML = `
+
+        <div class="no-alerts">
+
+          ✅ No active weather alerts
+          for the Chaminade area.
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    data.features.forEach(
+      feature => {
+
+        const props =
+          feature.properties;
+
+
+        const alert =
+          document.createElement(
+            "div"
+          );
+
+
+        alert.className =
+          "alert";
+
+
+        const expires =
+          props.expires
+            ? new Date(
+                props.expires
+              ).toLocaleString()
+            : "Unknown";
+
+
+        alert.innerHTML = `
+
+          <div class="alert-event">
+            ⚠️ ${
+              props.event ||
+              "Weather Alert"
+            }
+          </div>
+
+          <div class="alert-headline">
+            ${
+              props.headline ||
+              "Active weather alert."
+            }
+          </div>
+
+          <div class="alert-expires">
+            Expires: ${expires}
+          </div>
+
+        `;
+
+
+        container.appendChild(
+          alert
+        );
+
+
+        /*
+          Draw alert area on map.
+        */
+
+        if (feature.geometry) {
+
+          try {
+
+            const layer =
+              L.geoJSON(
+                feature,
+                {
+                  style: {
+                    color: "#e31818",
+                    weight: 3,
+                    fillColor: "#e31818",
+                    fillOpacity: .12
+                  }
+                }
+              ).addTo(map);
+
+
+            layer.bindPopup(
+
+              `<b>${
+                props.event ||
+                "Weather Alert"
+              }</b><br>${
+                props.headline ||
+                ""
+              }`
+
+            );
+
+
+            alertLayers.push(
+              layer
+            );
+
+
+          } catch (error) {
+
+            console.log(
+              "Alert geometry error:",
+              error
+            );
+
+          }
+
+        }
+
+      }
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "StormSignal alert error:",
+      error
+    );
+
+
+    document.getElementById(
+      "alerts"
+    ).innerHTML = `
+
+      <div class="no-alerts">
+        Unable to load alerts.
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function celsiusToFahrenheit(
+  celsius
+) {
+
+  if (
+    celsius === null ||
+    celsius === undefined
+  ) {
+
+    return "--";
+
+  }
+
+
+  return Math.round(
+    celsius * 9 / 5 + 32
+  );
+
+}
+
+
+function weatherIcon(
+  text
+) {
+
+  const value =
+    String(text || "")
+      .toLowerCase();
+
+
+  if (
+    value.includes("thunder")
+  ) {
+
+    return "⛈️";
+
+  }
+
+
+  if (
+
+    value.includes("snow") ||
+
+    value.includes("blizzard") ||
+
+    value.includes("sleet") ||
+
+    value.includes("ice")
+
+  ) {
+
+    return "❄️";
+
+  }
+
+
+  if (
+
+    value.includes("rain") ||
+
+    value.includes("shower") ||
+
+    value.includes("drizzle")
+
+  ) {
+
+    return "🌧️";
+
+  }
+
+
+  if (
+    value.includes("fog")
+  ) {
+
+    return "🌫️";
+
+  }
+
+
+  if (
+    value.includes("cloud")
+  ) {
+
+    return "☁️";
+
+  }
+
+
+  if (
+
+    value.includes("sunny") ||
+
+    value.includes("clear")
+
+  ) {
+
+    return "☀️";
+
+  }
+
+
+  return "🌤️";
+
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+getWeather();
+
+getAlerts();
+
+
+/*
+  Refresh weather every 5 minutes.
+*/
+
+setInterval(
+  () => {
 
     getWeather();
-
     getAlerts();
 
-
-    /*
-      Refresh weather every 5 minutes
-    */
-
-    setInterval(
-
-      () => {
-
-        getWeather();
-
-        getAlerts();
-
-      },
-
-      5 * 60 * 1000
-
-    );
+  },
+  5 * 60 * 1000
+);
 
 
-    /*
-      Refresh radar every 10 minutes
-    */
+/*
+  Refresh radar every 10 minutes.
+*/
 
-    setInterval(
+setInterval(
+  () => {
 
-      () => {
+    loadRadar();
 
-        loadRadar();
+  },
+  10 * 60 * 1000
+);
 
-      },
-
-      10 * 60 * 1000
-
-    );
-
-  </script>
+</script>
 
 </body>
 </html>
+```
+
