@@ -1176,27 +1176,57 @@ function showRadarFrame() {
     return;
   }
 
-
-  const frame =
-    radarFrames[radarIndex];
-
+  const frame = radarFrames[radarIndex];
 
   const tileURL =
-
     `https://tilecache.rainviewer.com` +
-
     `${frame.path}` +
-
     `/256/{z}/{x}/{y}/2/1_1.png`;
 
-
   if (radarLayer) {
-
-    map.removeLayer(
-      radarLayer
-    );
-
+    map.removeLayer(radarLayer);
   }
+
+  radarLayer = L.tileLayer(
+    tileURL,
+    {
+      opacity: 0.68,
+
+      tileSize: 256,
+
+      /*
+        RainViewer radar tiles have a lower
+        native zoom limit than the map.
+
+        Leaflet will reuse/scale the zoom-7
+        radar tiles when the map is zoomed
+        further in.
+      */
+      minZoom: MAP_MIN_ZOOM,
+      maxZoom: MAP_MAX_ZOOM,
+      maxNativeZoom: 7,
+
+      noWrap: true,
+
+      zIndex: 400,
+
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+
+      attribution: "Radar © RainViewer"
+    }
+  );
+
+  radarLayer.addTo(map);
+
+  const timestamp = frame.time * 1000;
+
+  document.getElementById("radarTime").textContent =
+    new Date(timestamp).toLocaleString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+}
 
 
   radarLayer = L.tileLayer(
