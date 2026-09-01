@@ -1,1 +1,1846 @@
- <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StormSignal Premium</title><link rel="icon" href="logo.png"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f6f6;color:#111}header{padding:16px 5%;background:#fff;border-bottom:3px solid #e31818}h1{margin:0;letter-spacing:1px}header p{margin:4px 0 0;color:#e31818;font-size:10px;font-weight:bold}.wrap{width:min(1400px,94%);margin:20px auto}.card{background:#fff;border:1px solid #e5e5e5;border-radius:13px;overflow:hidden;margin:16px 0;box-shadow:0 4px 15px #0001}.title{padding:15px;border-bottom:1px solid #e5e5e5;font-size:13px;font-weight:bold}#map{height:500px}.warn{padding:14px;background:#ad1212;color:#fff;border-radius:10px;margin-bottom:16px;line-height:1.45;font-size:13px}.hide{display:none}.row{display:flex;gap:8px;align-items:center;padding:11px;border-top:1px solid #e5e5e5}button,input,select,textarea{padding:9px;border:1px solid #ddd;border-radius:7px;font:inherit}button{cursor:pointer;font-weight:bold;background:#fff}.red{background:#e31818;color:#fff;border-color:#e31818}.time{margin-left:auto;font-size:11px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.current{padding:18px}.temp{font-size:55px;font-weight:bold}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:15px}.stat{padding:10px;background:#fafafa;border:1px solid #eee;border-radius:8px;font-size:11px}.stat small{display:block;color:#777}.hourly,.days{display:flex;overflow-x:auto}.hour{min-width:100px;padding:14px 8px;text-align:center;border-right:1px solid #eee;font-size:11px}.hour b{display:block;font-size:23px;margin:9px}.day{min-width:140px;padding:14px;text-align:center;border-right:1px solid #eee;font-size:11px}.badge{display:inline-block;margin-top:7px;padding:3px 6px;background:#e31818;color:#fff;border-radius:4px;font-size:8px;font-weight:bold}.empty{padding:22px;color:#777;text-align:center}@media(max-width:700px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}#map{height:390px}}</style></head><body><header><h1>STORMSIGNAL PREMIUM</h1><p>ADMIN WEATHER DESK • CHAMINADE / ST. LOUIS</p></header><main class="wrap"><div id="warn" class="warn hide"></div><section class="card"><div class="title">📡 LIVE RADAR <span id="rs" style="float:right">LOADING</span></div><div id="map"></div><div class="row"><button id="pr">‹</button><button id="play" class="red">▶ Play</button><button id="nx">›</button><button id="last">Latest</button><span class="time" id="rt">Loading…</span></div></section><div class="grid"><section class="card"><div class="title">🌡️ CURRENT CONDITIONS</div><div class="current"><span class="temp" id="temp">--</span><b id="cond">Loading…</b><div class="stats"><div class="stat"><small>Feels like</small><b id="feel">--</b></div><div class="stat"><small>Wind</small><b id="wind">--</b></div><div class="stat"><small>Humidity</small><b id="hum">--</b></div><div class="stat"><small>Pressure</small><b id="pres">--</b></div></div></div></section><section class="card"><div class="title">⚠️ ACTIVE NWS ALERTS</div><div id="alerts" class="empty">Loading alerts…</div></section></div><section class="card"><div class="title">🕐 24-HOUR FORECAST</div><div class="hourly" id="hourly"><div class="empty">Loading hourly forecast…</div></div></section><section class="card"><div class="title">🌦️ 7-DAY FORECAST</div><div class="days" id="days"><div class="empty">Loading seven-day forecast…</div></div></section><section class="card"><div class="title">CHAMIWARN ADMIN CONTROL</div><div class="current"><div id="authStatus">Sign in below to issue ChamiWARN.</div><input id="adminEmail" type="email" placeholder="Admin email"><input id="adminPass" type="password" placeholder="Password"><div class="row"><button id="login" class="red">Sign in</button><button id="logout">Sign out</button></div><div id="adminTools" class="hide"><select id="level"><option>WATCH</option><option selected>WARN</option><option>ALERT</option></select><input id="date" type="date"><input id="headline" maxlength="140" placeholder="ChamiWARN headline"><textarea id="details" maxlength="600" placeholder="Details / recommended action"></textarea><div class="row"><button id="publish" class="red">Publish / Upgrade</button><button id="remove">Remove ChamiWARN</button></div><div id="adminMsg"></div></div></div></section></main><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script type="module">import{initializeApp}from"https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";import{getFirestore,doc,onSnapshot}from"https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";const firebaseConfig={apiKey:"AIzaSyAJ4vOeQrUDY1f9O3-3zGF1oCgptP7ePQw",authDomain:"stormsignal-premium.firebaseapp.com",projectId:"stormsignal-premium",storageBucket:"stormsignal-premium.firebasestorage.app",messagingSenderId:"104140219197",appId:"1:104140219197:web:6cb2a20673130ae48c5b54"};const db=getFirestore(initializeApp(firebaseConfig)),wr=doc(db,"public_status","chamiwarn"),LAT=38.6273,LON=-90.339,$=x=>document.getElementById(x);let w=null,host='',fs=[],i=0,rl,timer,run=false;const map=L.map('map',{center:[LAT,LON],zoom:9,minZoom:7,maxZoom:10});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10,attribution:'© OpenStreetMap'}).addTo(map);map.createPane('radar');map.getPane('radar').style.zIndex=350;map.getPane('radar').style.pointerEvents='none';L.marker([LAT,LON]).addTo(map).bindPopup('Chaminade');const icon=t=>{t=(t||'').toLowerCase();return t.includes('thunder')?'⛈️':t.includes('snow')?'❄️':t.includes('rain')||t.includes('shower')?'🌧️':t.includes('cloud')?'☁️':t.includes('clear')||t.includes('sunny')?'☀️':'🌤️'};const esc=s=>String(s??'--').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function banner(){if(!w?.active||w.expiresAt?.toDate?.()<new Date())return $('warn').classList.add('hide');$('warn').innerHTML=`<b>CHAMI${w.level} DAY — ${esc(w.alertDate)}</b><br>${esc(w.headline)}${w.details?'<br>'+esc(w.details):''}<br><small>Unofficial StormSignal informational status. Follow NWS and Chaminade guidance.</small>`;$('warn').classList.remove('hide')}onSnapshot(wr,s=>{w=s.exists()?s.data():null;banner();daily()},e=>console.error('ChamiWARN:',e));function show(){if(rl)map.removeLayer(rl);let f=fs[i];rl=L.tileLayer(`${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`,{pane:'radar',opacity:.82,maxZoom:10,maxNativeZoom:7,attribution:'Radar © RainViewer'}).addTo(map);$('rt').textContent=new Date(f.time*1000).toLocaleString([] ,{weekday:'short',hour:'numeric',minute:'2-digit'})}async function radar(){try{let r=await fetch('https://api.rainviewer.com/public/weather-maps.json',{cache:'no-store'}),d=await r.json();if(!r.ok||!d.host||!d.radar?.past?.length)throw Error('metadata');host=d.host.replace(/\/$/,'');fs=d.radar.past;i=fs.length-1;show();$('rs').textContent='LIVE'}catch(e){console.error(e);$('rs').textContent='RADAR UNAVAILABLE'}}function pause(){run=false;$('play').textContent='▶ Play';clearInterval(timer)}$('play').onclick=()=>{if(!fs.length)return;if(run)return pause();run=true;$('play').textContent='❚❚ Pause';timer=setInterval(()=>{i=(i+1)%fs.length;show()},700)};$('pr').onclick=()=>{if(fs.length){pause();i=(i-1+fs.length)%fs.length;show()}};$('nx').onclick=()=>{if(fs.length){pause();i=(i+1)%fs.length;show()}};$('last').onclick=()=>{if(fs.length){pause();i=fs.length-1;show()}};async function json(u){let r=await fetch(u,{headers:{Accept:'application/geo+json'}});if(!r.ok)throw Error(r.status);return r.json()}async function weather(){try{let p=await json(`https://api.weather.gov/points/${LAT},${LON}`);hourly(p.properties.forecastHourly);daily(p.properties.forecast);let ss=await json(p.properties.observationStations),o;for(const s of ss.features.slice(0,6)){try{let q=await json(s.id+'/observations/latest');if(q.properties?.temperature?.value!=null){o=q.properties;break}}catch(e){}}if(o){let f=c=>Math.round(c*9/5+32),t=f(o.temperature.value),x=o.heatIndex?.value??o.windChill?.value;$('temp').textContent=t+'°';$('cond').textContent=o.textDescription||'--';$('feel').textContent=(x!=null?f(x):t)+'°';$('wind').textContent=o.windSpeed?.value!=null?Math.round(o.windSpeed.value*.621)+' mph':'--';$('hum').textContent=o.relativeHumidity?.value!=null?Math.round(o.relativeHumidity.value)+'%':'--';$('pres').textContent=o.barometricPressure?.value!=null?Math.round(o.barometricPressure.value/100)+' hPa':'--'}}catch(e){console.error('weather',e)}}async function hourly(u){try{let d=await json(u),a=d.properties.periods.slice(0,24);$('hourly').innerHTML=a.map((p,n)=>`<div class="hour">${n?'': 'NOW'}<b>${p.temperature??'--'}°</b><div>${icon(p.shortForecast)}</div><small>${esc(p.shortForecast)}</small><br>💧${p.probabilityOfPrecipitation?.value??'--'}%<br>💨${esc(p.windSpeed)}</div>`).join('')}catch(e){$('hourly').innerHTML='<div class="empty">Hourly forecast unavailable.</div>'}}async function daily(u){if(!u)return;try{let d=await json(u),a=d.properties.periods.filter(x=>x.isDaytime).slice(0,7);$('days').innerHTML=a.map(p=>{let hit=w?.active&&p.startTime.slice(0,10)===w.alertDate;return `<div class="day"><b>${esc(p.name)}</b><div style="font-size:26px;margin:9px">${icon(p.shortForecast)}</div><b>${p.temperature??'--'}°</b><div>${esc(p.shortForecast)}</div>${hit?'<span class="badge">CHAMI'+w.level+'</span>':''}</div>`}).join('')}catch(e){$('days').innerHTML='<div class="empty">Seven-day forecast unavailable.</div>'}}async function alerts(){try{let d=await json(`https://api.weather.gov/alerts/active?point=${LAT},${LON}`);$('alerts').innerHTML=d.features.length?d.features.map(x=>`<div style="padding:12px;border-bottom:1px solid #eee"><b style="color:#e31818">${esc(x.properties.event)}</b><br><small>${esc(x.properties.headline)}</small></div>`).join(''):'<div class="empty">✅ No active alerts.</div>'}catch(e){$('alerts').textContent='Alerts unavailable.'}}radar();weather();alerts();setInterval(radar,600000);setInterval(weather,300000);setInterval(alerts,300000);</script></body></html><script 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>StormSignal Premium | Weather Desk</title>
+
+  <link rel="icon" href="logo.png" type="image/png">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <style>
+    :root {
+      --bg: #080b10;
+      --header: #0d1219;
+      --panel: #121923;
+      --panel-dark: #0d131b;
+      --panel-hover: #1c2633;
+      --border: #2e3b4c;
+      --text: #f4f7fb;
+      --muted: #9ba9ba;
+      --red: #ef2626;
+      --red-dark: #bb1111;
+      --green: #22c55e;
+      --yellow: #facc15;
+      --orange: #f59e0b;
+      --blue: #4ca5ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, #182536 0%, transparent 32%),
+        var(--bg);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    header {
+      height: 74px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(13, 18, 25, 0.98);
+      border-bottom: 3px solid var(--red);
+      box-shadow: 0 3px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--red);
+      border: 2px solid #ff7777;
+      border-radius: 9px;
+      box-shadow: 0 0 20px rgba(239, 38, 38, 0.35);
+      font-size: 22px;
+    }
+
+    .brand h1 {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+    }
+
+    .brand p {
+      margin-top: 3px;
+      color: var(--red);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+    }
+
+    .live-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+    }
+
+    .login-screen {
+      width: min(430px, calc(100% - 32px));
+      margin: 11vh auto;
+      padding: 25px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--red);
+      border-radius: 13px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    }
+
+    .login-screen h2 {
+      margin-bottom: 8px;
+      font-size: 22px;
+    }
+
+    .login-screen p {
+      margin-bottom: 15px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .shell {
+      width: min(1800px, calc(100% - 28px));
+      margin: 16px auto 34px;
+    }
+
+    .alert-banner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      color: white;
+      background: linear-gradient(90deg, #9c1212, #d92020);
+      border: 1px solid #ff6f6f;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(200, 20, 20, 0.2);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .alert-banner strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+      letter-spacing: 0.6px;
+    }
+
+    .alert-banner small {
+      display: block;
+      margin-top: 7px;
+      opacity: 0.86;
+      font-size: 10px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr) 320px;
+      gap: 14px;
+    }
+
+    .panel {
+      overflow: hidden;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.2);
+    }
+
+    .panel-title {
+      padding: 13px 14px;
+      color: #ffffff;
+      background: #111720;
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.9px;
+    }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    .label {
+      display: block;
+      margin: 14px 0 6px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .label:first-child {
+      margin-top: 0;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      color: var(--text);
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px rgba(239, 38, 38, 0.15);
+    }
+
+    textarea {
+      min-height: 78px;
+      resize: vertical;
+    }
+
+    .button {
+      min-height: 37px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: var(--panel-hover);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .button:hover:not(:disabled) {
+      border-color: var(--red);
+    }
+
+    .button.red {
+      color: white;
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    .button.red:hover:not(:disabled) {
+      background: var(--red-dark);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .mode {
+      min-height: 38px;
+      padding: 7px;
+      color: var(--text);
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .mode:hover {
+      border-color: var(--red);
+    }
+
+    .mode.active {
+      color: white;
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    .mode.future {
+      color: #78889b;
+    }
+
+    .two-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .small-note {
+      margin-top: 11px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .radar-meta {
+      margin-top: 12px;
+      padding: 10px;
+      color: #c1cad5;
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    #map {
+      width: 100%;
+      height: 630px;
+      background: #18212b;
+    }
+
+    .leaflet-container {
+      background: #18212b;
+      font-family: inherit;
+    }
+
+    .leaflet-control-zoom a {
+      color: var(--red) !important;
+    }
+
+    .bottom-map-controls {
+      padding: 11px 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .radar-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .radar-time {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .radar-status {
+      margin-top: 10px;
+      color: var(--orange);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.4px;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .legend-bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 50px;
+      background: linear-gradient(90deg, #4ade80, #facc15, #fb923c, #ef4444, #c026d3);
+    }
+
+    .right-stack {
+      display: grid;
+      align-content: start;
+      gap: 14px;
+    }
+
+    .current-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .current-temp {
+      font-size: 45px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+
+    .condition {
+      color: white;
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .subtext {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      padding: 9px;
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+
+    .stat small {
+      display: block;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      color: white;
+      font-size: 13px;
+    }
+
+    .nws-alert {
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--border);
+      border-left: 4px solid var(--red);
+    }
+
+    .nws-alert:last-child {
+      border-bottom: none;
+    }
+
+    .nws-alert strong {
+      display: block;
+      color: white;
+      font-size: 11px;
+    }
+
+    .nws-alert p {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .empty {
+      padding: 18px 14px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .lower-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .hourly-wrap,
+    .daily-wrap {
+      overflow-x: auto;
+    }
+
+    .hourly {
+      display: flex;
+      min-width: max-content;
+    }
+
+    .hour {
+      width: 94px;
+      min-height: 155px;
+      padding: 13px 7px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+
+    .hour:first-child {
+      background: rgba(239, 38, 38, 0.12);
+    }
+
+    .hour-time {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .hour-temp {
+      margin-top: 8px;
+      color: white;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .hour-icon {
+      margin: 7px 0;
+      font-size: 24px;
+    }
+
+    .hour-text,
+    .hour-wind {
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.3;
+    }
+
+    .days {
+      display: grid;
+      min-width: 620px;
+    }
+
+    .day {
+      display: grid;
+      grid-template-columns: 62px 30px 42px 1fr;
+      align-items: center;
+      gap: 7px;
+      min-height: 42px;
+      padding: 8px 11px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+    }
+
+    .day:last-child {
+      border-bottom: none;
+    }
+
+    .day-name,
+    .day-temp {
+      color: white;
+      font-weight: 850;
+    }
+
+    .day-desc {
+      overflow: hidden;
+      color: var(--muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 10px;
+    }
+
+    .chami-badge {
+      display: inline-block;
+      margin-top: 3px;
+      padding: 2px 5px;
+      color: white;
+      background: var(--red);
+      border-radius: 4px;
+      font-size: 7px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 1250px) {
+      .workspace {
+        grid-template-columns: 260px minmax(0, 1fr);
+      }
+
+      .right-stack {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 850px) {
+      header {
+        padding: 0 14px;
+      }
+
+      .header-right {
+        display: none;
+      }
+
+      .shell {
+        width: calc(100% - 18px);
+      }
+
+      .workspace,
+      .right-stack,
+      .lower-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .right-stack {
+        grid-column: auto;
+      }
+
+      #map {
+        height: 440px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-mark">⚡</div>
+
+      <div>
+        <h1>STORMSIGNAL PREMIUM</h1>
+        <p>ADVANCED WEATHER DESK • ADMIN ACCESS</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <span class="live-dot"></span>
+      LIVE DATA WORKSPACE
+    </div>
+  </header>
+
+  <section class="login-screen" id="loginScreen">
+    <h2>Premium Admin Access</h2>
+
+    <p>
+      Sign in with an approved StormSignal administrator account to access
+      the Premium weather desk and ChamiWARN controls.
+    </p>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="Administrator email"
+      autocomplete="email"
+    >
+
+    <input
+      id="password"
+      type="password"
+      placeholder="Password"
+      autocomplete="current-password"
+    >
+
+    <button
+      class="button red"
+      id="signInButton"
+      type="button"
+      style="width:100%; margin-top:10px;"
+    >
+      Sign In
+    </button>
+
+    <div class="small-note" id="loginMessage"></div>
+  </section>
+
+  <main class="shell hidden" id="premiumApp">
+    <div class="alert-banner" id="publicChamiWarn"></div>
+
+    <div class="workspace">
+      <aside class="panel">
+        <div class="panel-title">RADAR CONTROL CENTER</div>
+
+        <div class="panel-body">
+          <label class="label" for="radarSite">Individual NEXRAD radar</label>
+
+          <select id="radarSite">
+            <option value="KLSX">KLSX — St. Louis, Missouri</option>
+            <option value="KEAX">KEAX — Kansas City, Missouri</option>
+            <option value="KSGF">KSGF — Springfield, Missouri</option>
+            <option value="KILX">KILX — Lincoln, Illinois</option>
+            <option value="KPAH">KPAH — Paducah, Kentucky</option>
+            <option value="KIND">KIND — Indianapolis, Indiana</option>
+            <option value="KILN">KILN — Wilmington, Ohio</option>
+            <option value="KDMX">KDMX — Des Moines, Iowa</option>
+          </select>
+
+          <label class="label">Radar product</label>
+
+          <div class="mode-grid">
+            <button class="mode active" data-mode="MOSAIC" type="button">
+              Mosaic Loop
+            </button>
+
+            <button class="mode" data-mode="N0B" type="button">
+              Reflectivity
+            </button>
+
+            <button class="mode" data-mode="N0U" type="button">
+              Velocity
+            </button>
+
+            <button class="mode" data-mode="N0S" type="button">
+              SR Velocity
+            </button>
+
+            <button class="mode" data-mode="NET" type="button">
+              Echo Tops
+            </button>
+
+            <button class="mode future" data-mode="CC" type="button">
+              CC — Future
+            </button>
+
+            <button class="mode future" data-mode="ZDR" type="button">
+              ZDR — Future
+            </button>
+
+            <button class="mode future" data-mode="KDP" type="button">
+              KDP — Future
+            </button>
+          </div>
+
+          <label class="label" for="radarOpacity">Radar opacity</label>
+
+          <input
+            id="radarOpacity"
+            type="range"
+            min="20"
+            max="100"
+            value="82"
+          >
+
+          <div class="two-buttons">
+            <button class="button" id="ringsButton" type="button">
+              Rings: On
+            </button>
+
+            <button class="button" id="homeButton" type="button">
+              Center Chaminade
+            </button>
+          </div>
+
+          <div class="radar-meta" id="radarMeta">
+            KLSX selected.<br>
+            RainViewer Mosaic mode is active.<br>
+            Map zoom is limited to supported radar levels.
+          </div>
+
+          <p class="small-note" id="modeMessage">
+            Mosaic mode uses animated RainViewer precipitation imagery.
+            Individual IEM radar modes use the selected NEXRAD site.
+          </p>
+
+          <button
+            class="button"
+            id="signOutButton"
+            type="button"
+            style="width:100%; margin-top:14px;"
+          >
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-title">
+          LIVE RADAR WORKSPACE
+          <span id="zoomReadout" style="float:right; color:#9ba9ba;">
+            Zoom: --
+          </span>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="bottom-map-controls">
+          <div class="radar-buttons">
+            <button class="button" id="previousRadar" type="button">‹</button>
+            <button class="button red" id="playRadar" type="button">▶ Play</button>
+            <button class="button" id="nextRadar" type="button">›</button>
+            <button class="button" id="latestRadar" type="button">Latest</button>
+
+            <div class="radar-time" id="radarTime">
+              Loading radar...
+            </div>
+          </div>
+
+          <div class="radar-status" id="radarStatus">
+            ● LOADING RADAR
+          </div>
+
+          <div class="legend">
+            <span>Light</span>
+            <div class="legend-bar"></div>
+            <span>Heavy</span>
+            <span>Reflectivity</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="right-stack">
+        <section class="panel">
+          <div class="panel-title">CURRENT CONDITIONS</div>
+
+          <div class="panel-body">
+            <div class="current-top">
+              <div class="current-temp" id="temperature">--</div>
+
+              <div>
+                <div class="condition" id="condition">Loading...</div>
+                <div class="subtext">Chaminade • St. Louis, Missouri</div>
+              </div>
+            </div>
+
+            <div class="stats">
+              <div class="stat">
+                <small>Feels like</small>
+                <strong id="feels">--</strong>
+              </div>
+
+              <div class="stat">
+                <small>Wind</small>
+                <strong id="wind">--</strong>
+              </div>
+
+              <div class="stat">
+                <small>Humidity</small>
+                <strong id="humidity">--</strong>
+              </div>
+
+              <div class="stat">
+                <small>Pressure</small>
+                <strong id="pressure">--</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">ACTIVE NWS ALERTS</div>
+          <div id="alerts">
+            <div class="empty">Loading active alerts...</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">CHAMIWARN CONTROL CENTER</div>
+
+          <div class="panel-body">
+            <label class="label" for="warnLevel">Status level</label>
+
+            <select id="warnLevel">
+              <option value="WATCH">ChamiWATCH Day</option>
+              <option value="WARN" selected>ChamiWARN Day</option>
+              <option value="ALERT">ChamiALERT Day</option>
+            </select>
+
+            <label class="label" for="warnDate">Affected date</label>
+            <input id="warnDate" type="date">
+
+            <label class="label" for="warnHeadline">Headline</label>
+
+            <input
+              id="warnHeadline"
+              type="text"
+              maxlength="140"
+              placeholder="Example: Severe storms possible after school"
+            >
+
+            <label class="label" for="warnDetails">Details / action</label>
+
+            <textarea
+              id="warnDetails"
+              maxlength="600"
+              placeholder="Example: Monitor official NWS alerts and Chaminade guidance."
+            ></textarea>
+
+            <div class="two-buttons">
+              <button class="button red" id="publishWarn" type="button">
+                Publish / Upgrade
+              </button>
+
+              <button class="button" id="removeWarn" type="button">
+                Remove Status
+              </button>
+            </div>
+
+            <p class="small-note" id="warnMessage">
+              Publish replaces the public ChamiWARN status. Remove deletes it
+              for all Basic-site visitors.
+            </p>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="lower-grid">
+      <section class="panel">
+        <div class="panel-title">NEXT 24 HOURS</div>
+
+        <div class="hourly-wrap">
+          <div class="hourly" id="hourly">
+            <div class="empty">Loading hourly forecast...</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">7-DAY FORECAST</div>
+
+        <div class="daily-wrap">
+          <div class="days" id="daily">
+            <div class="empty">Loading seven-day forecast...</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script type="module">
+    import {
+      initializeApp
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      deleteDoc,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAJ4vOeQrUDY1f9O3-3zGF1oCgptP7ePQw",
+      authDomain: "stormsignal-premium.firebaseapp.com",
+      projectId: "stormsignal-premium",
+      storageBucket: "stormsignal-premium.firebasestorage.app",
+      messagingSenderId: "104140219197",
+      appId: "1:104140219197:web:6cb2a20673130ae48c5b54",
+      measurementId: "G-YNHX5T9C1G"
+    };
+
+    const ADMIN_EMAILS = [
+      "tsartors31@ccp-stl.org",
+      "boshaughnessy@chaminade-stl.org",
+      "spgcookie@gmail.com"
+    ];
+
+    const LAT = 38.6273;
+    const LON = -90.3390;
+
+    const radarSites = {
+      KLSX: { lat: 38.6989, lon: -90.6828, name: "St. Louis, Missouri" },
+      KEAX: { lat: 38.8102, lon: -94.2645, name: "Pleasant Hill, Missouri" },
+      KSGF: { lat: 37.2352, lon: -93.4005, name: "Springfield, Missouri" },
+      KILX: { lat: 40.1505, lon: -89.3368, name: "Lincoln, Illinois" },
+      KPAH: { lat: 37.0684, lon: -88.7720, name: "Paducah, Kentucky" },
+      KIND: { lat: 39.7075, lon: -86.2803, name: "Indianapolis, Indiana" },
+      KILN: { lat: 39.4203, lon: -83.8215, name: "Wilmington, Ohio" },
+      KDMX: { lat: 41.7312, lon: -93.7229, name: "Des Moines, Iowa" }
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const auth = getAuth(firebaseApp);
+    const db = getFirestore(firebaseApp);
+    const chamiWarnRef = doc(db, "public_status", "chamiwarn");
+
+    const $ = function (id) {
+      return document.getElementById(id);
+    };
+
+    let map = null;
+    let radarLayer = null;
+    let radarFrames = [];
+    let radarHost = "";
+    let radarIndex = 0;
+    let radarPlaying = false;
+    let radarTimer = null;
+    let rangeRings = [];
+    let radarSiteMarker = null;
+    let ringsVisible = true;
+    let activeChamiWarn = null;
+    let selectedMode = "MOSAIC";
+    let alertLayers = [];
+
+    function isAdmin(user) {
+      return user && ADMIN_EMAILS.includes(String(user.email || "").toLowerCase());
+    }
+
+    function safeText(value, fallback = "--") {
+      if (value === null || value === undefined) {
+        return fallback;
+      }
+
+      const text = String(value).trim();
+      return text || fallback;
+    }
+
+    function escapeHtml(value) {
+      return safeText(value, "").replace(/[&<>"']/g, function (character) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;"
+        }[character];
+      });
+    }
+
+    function isNumber(value) {
+      return value !== null && value !== undefined && Number.isFinite(Number(value));
+    }
+
+    function celsiusToFahrenheit(celsius) {
+      return isNumber(celsius)
+        ? Math.round((Number(celsius) * 9 / 5) + 32)
+        : null;
+    }
+
+    function weatherIcon(text) {
+      const value = String(text || "").toLowerCase();
+
+      if (value.includes("thunder")) return "⛈️";
+      if (value.includes("snow") || value.includes("sleet") || value.includes("ice")) return "❄️";
+      if (value.includes("rain") || value.includes("shower") || value.includes("drizzle")) return "🌧️";
+      if (value.includes("fog") || value.includes("haze")) return "🌫️";
+      if (value.includes("cloud") || value.includes("overcast")) return "☁️";
+      if (value.includes("clear") || value.includes("sunny")) return "☀️";
+
+      return "🌤️";
+    }
+
+    async function nwsFetch(url) {
+      const response = await fetch(url, {
+        headers: {
+          "Accept": "application/geo+json"
+        },
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(`NWS HTTP ${response.status}`);
+      }
+
+      return response.json();
+    }
+
+    function setRadarStatus(message, color) {
+      $("radarStatus").textContent = message;
+      $("radarStatus").style.color = color;
+    }
+
+    function initMap() {
+      map = L.map("map", {
+        center: [LAT, LON],
+        zoom: 9,
+        minZoom: 7,
+        maxZoom: 10
+      });
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 10,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      map.createPane("radarPane");
+      map.getPane("radarPane").style.zIndex = "350";
+      map.getPane("radarPane").style.pointerEvents = "none";
+
+      map.createPane("alertPane");
+      map.getPane("alertPane").style.zIndex = "425";
+      map.getPane("alertPane").style.pointerEvents = "none";
+
+      L.marker([LAT, LON])
+        .addTo(map)
+        .bindPopup("<b>Chaminade</b><br>StormSignal home area");
+
+      map.on("zoomend", function () {
+        $("zoomReadout").textContent = `Zoom: ${map.getZoom()}`;
+      });
+
+      $("zoomReadout").textContent = `Zoom: ${map.getZoom()}`;
+
+      updateRadarSite();
+    }
+
+    function removeRadarLayer() {
+      if (radarLayer && map && map.hasLayer(radarLayer)) {
+        map.removeLayer(radarLayer);
+      }
+
+      radarLayer = null;
+    }
+
+    function addRadarLayer(url, maxNativeZoom) {
+      removeRadarLayer();
+
+      radarLayer = L.tileLayer(url, {
+        pane: "radarPane",
+        opacity: Number($("radarOpacity").value) / 100,
+        maxZoom: 10,
+        maxNativeZoom: maxNativeZoom,
+        noWrap: true,
+        updateWhenZooming: false,
+        updateWhenIdle: true,
+        attribution: "Radar © RainViewer / Iowa Environmental Mesonet"
+      });
+
+      radarLayer.on("tileerror", function (event) {
+        console.error("StormSignal Premium radar tile error:", event);
+        setRadarStatus("● RADAR TILE TEMPORARILY UNAVAILABLE", "#ef2626");
+      });
+
+      radarLayer.addTo(map);
+    }
+
+    async function loadRainViewer() {
+      setRadarStatus("● LOADING RAINVIEWER MOSAIC", "#f59e0b");
+
+      try {
+        const response = await fetch(
+          "https://api.rainviewer.com/public/weather-maps.json",
+          {
+            cache: "no-store"
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`RainViewer metadata HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.host || !Array.isArray(data.radar?.past) || !data.radar.past.length) {
+          throw new Error("RainViewer returned no valid radar frame data.");
+        }
+
+        radarHost = data.host.replace(/\/$/, "");
+
+        radarFrames = data.radar.past.filter(function (frame) {
+          return frame && frame.path && isNumber(frame.time);
+        });
+
+        if (!radarFrames.length) {
+          throw new Error("No usable RainViewer frames were found.");
+        }
+
+        radarIndex = radarFrames.length - 1;
+        showRainViewerFrame(radarIndex);
+
+        setRadarStatus("● LIVE RAINVIEWER MOSAIC", "#22c55e");
+      } catch (error) {
+        console.error("StormSignal Premium RainViewer error:", error);
+
+        radarFrames = [];
+        removeRadarLayer();
+
+        $("radarTime").textContent = "Unavailable";
+        setRadarStatus("● RADAR TEMPORARILY UNAVAILABLE", "#ef2626");
+      }
+    }
+
+    function showRainViewerFrame(index) {
+      if (!radarFrames.length || !radarFrames[index]) {
+        return;
+      }
+
+      const frame = radarFrames[index];
+
+      const tileUrl =
+        `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+
+      /*
+        maxNativeZoom: 7 prevents unsupported RainViewer zoom requests.
+        Leaflet scales valid zoom-7 imagery at map zoom levels 8–10.
+      */
+      addRadarLayer(tileUrl, 7);
+
+      radarIndex = index;
+
+      $("radarTime").textContent =
+        new Date(Number(frame.time) * 1000).toLocaleString([], {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit"
+        });
+    }
+
+    function loadIemProduct(product) {
+      pauseRadar();
+
+      const radarId = $("radarSite").value;
+      const iemRadarId = radarId.slice(1);
+
+      const tileUrl =
+        `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/ridge::${iemRadarId}-${product}-0/{z}/{x}/{y}.png`;
+
+      addRadarLayer(tileUrl, 10);
+
+      $("radarTime").textContent = `Latest ${product} scan`;
+      setRadarStatus(`● LIVE ${product} — INDIVIDUAL ${radarId}`, "#22c55e");
+    }
+
+    function pauseRadar() {
+      radarPlaying = false;
+      $("playRadar").textContent = "▶ Play";
+
+      if (radarTimer !== null) {
+        clearInterval(radarTimer);
+        radarTimer = null;
+      }
+    }
+
+    function playRadar() {
+      if (selectedMode !== "MOSAIC") {
+        setRadarStatus(
+          "● ANIMATION IS AVAILABLE IN RAINVIEWER MOSAIC MODE",
+          "#f59e0b"
+        );
+
+        return;
+      }
+
+      if (!radarFrames.length) {
+        return;
+      }
+
+      pauseRadar();
+
+      radarPlaying = true;
+      $("playRadar").textContent = "❚❚ Pause";
+
+      radarTimer = setInterval(function () {
+        radarIndex = (radarIndex + 1) % radarFrames.length;
+        showRainViewerFrame(radarIndex);
+      }, 700);
+    }
+
+    function setMode(mode) {
+      selectedMode = mode;
+
+      document.querySelectorAll(".mode").forEach(function (button) {
+        button.classList.toggle("active", button.dataset.mode === mode);
+      });
+
+      if (mode === "MOSAIC") {
+        $("modeMessage").textContent =
+          "RainViewer Mosaic is animated precipitation/reflectivity imagery.";
+
+        loadRainViewer();
+        return;
+      }
+
+      if (["N0B", "N0U", "N0S", "NET"].includes(mode)) {
+        const labels = {
+          N0B: "Base Reflectivity",
+          N0U: "Base Velocity",
+          N0S: "Storm-Relative Velocity",
+          NET: "Echo Tops"
+        };
+
+        $("modeMessage").textContent =
+          `${labels[mode]} is loading from the selected individual NEXRAD radar.`;
+
+        loadIemProduct(mode);
+        return;
+      }
+
+      pauseRadar();
+      removeRadarLayer();
+
+      $("radarTime").textContent = "Level II source required";
+
+      $("modeMessage").textContent =
+        "Correlation Coefficient, ZDR, KDP, Spectrum Width, and other dual-pol products need a future Level II-compatible radar source.";
+
+      setRadarStatus("● ADVANCED LEVEL II PRODUCT NOT CONNECTED", "#f59e0b");
+    }
+
+    function updateRadarSite() {
+      if (!map) {
+        return;
+      }
+
+      const radarId = $("radarSite").value;
+      const site = radarSites[radarId];
+
+      rangeRings.forEach(function (ring) {
+        map.removeLayer(ring);
+      });
+
+      rangeRings = [];
+
+      [50000, 100000, 150000, 200000].forEach(function (radius) {
+        const ring = L.circle([site.lat, site.lon], {
+          radius: radius,
+          color: "#ef2626",
+          weight: 1,
+          opacity: 0.65,
+          fill: false,
+          interactive: false
+        });
+
+        if (ringsVisible) {
+          ring.addTo(map);
+        }
+
+        rangeRings.push(ring);
+      });
+
+      if (radarSiteMarker) {
+        map.removeLayer(radarSiteMarker);
+      }
+
+      radarSiteMarker = L.circleMarker([site.lat, site.lon], {
+        radius: 7,
+        color: "#ef2626",
+        weight: 3,
+        fillColor: "#ffffff",
+        fillOpacity: 1
+      }).addTo(map);
+
+      radarSiteMarker.bindPopup(`<b>${radarId}</b><br>${site.name}`);
+
+      $("radarMeta").innerHTML = `
+        <strong>${radarId}</strong> — ${site.name}<br>
+        Product: ${selectedMode}<br>
+        Range rings: 50 / 100 / 150 / 200 km
+      `;
+
+      if (selectedMode !== "MOSAIC") {
+        loadIemProduct(selectedMode);
+      }
+    }
+
+    function renderChamiWarn() {
+      const banner = $("publicChamiWarn");
+
+      if (!activeChamiWarn || activeChamiWarn.active !== true) {
+        banner.style.display = "none";
+        banner.innerHTML = "";
+        return;
+      }
+
+      const label = activeChamiWarn.level === "ALERT"
+        ? "CHAMIALERT DAY"
+        : activeChamiWarn.level === "WATCH"
+          ? "CHAMIWATCH DAY"
+          : "CHAMIWARN DAY";
+
+      banner.innerHTML = `
+        <strong>${escapeHtml(label)} — ${escapeHtml(activeChamiWarn.alertDate)}</strong>
+        ${escapeHtml(activeChamiWarn.headline)}
+        ${activeChamiWarn.details ? `<br>${escapeHtml(activeChamiWarn.details)}` : ""}
+        <small>
+          StormSignal informational status only. Follow official NWS alerts
+          and Chaminade administration guidance for official actions.
+        </small>
+      `;
+
+      banner.style.display = "block";
+    }
+
+    function renderCurrentUnavailable() {
+      $("temperature").textContent = "--";
+      $("condition").textContent = "Weather unavailable";
+      $("feels").textContent = "--";
+      $("wind").textContent = "--";
+      $("humidity").textContent = "--";
+      $("pressure").textContent = "--";
+    }
+
+    async function loadWeather() {
+      try {
+        const point = await nwsFetch(
+          `https://api.weather.gov/points/${LAT},${LON}`
+        );
+
+        const properties = point.properties || {};
+
+        if (properties.observationStations) {
+          loadCurrentConditions(properties.observationStations);
+        }
+
+        if (properties.forecastHourly) {
+          loadHourlyForecast(properties.forecastHourly);
+        }
+
+        if (properties.forecast) {
+          loadSevenDayForecast(properties.forecast);
+        }
+      } catch (error) {
+        console.error("StormSignal Premium weather error:", error);
+        renderCurrentUnavailable();
+      }
+    }
+
+    async function loadCurrentConditions(stationsUrl) {
+      try {
+        const stationData = await nwsFetch(stationsUrl);
+        const stations = Array.isArray(stationData.features)
+          ? stationData.features.slice(0, 8)
+          : [];
+
+        let observation = null;
+
+        for (const station of stations) {
+          try {
+            const data = await nwsFetch(`${station.id}/observations/latest`);
+
+            if (isNumber(data.properties?.temperature?.value)) {
+              observation = data.properties;
+              break;
+            }
+          } catch (error) {
+            console.warn("NWS observation station failed:", error);
+          }
+        }
+
+        if (!observation) {
+          throw new Error("No nearby station returned usable observations.");
+        }
+
+        const temp = celsiusToFahrenheit(observation.temperature?.value);
+        const heatIndex = celsiusToFahrenheit(observation.heatIndex?.value);
+        const windChill = celsiusToFahrenheit(observation.windChill?.value);
+        const feels = heatIndex ?? windChill ?? temp;
+
+        $("temperature").textContent = temp === null ? "--" : `${temp}°`;
+        $("condition").textContent = safeText(observation.textDescription, "Conditions unavailable");
+        $("feels").textContent = feels === null ? "--" : `${feels}°`;
+
+        $("wind").textContent = isNumber(observation.windSpeed?.value)
+          ? `${Math.round(Number(observation.windSpeed.value) * 0.621371)} mph`
+          : "--";
+
+        $("humidity").textContent = isNumber(observation.relativeHumidity?.value)
+          ? `${Math.round(Number(observation.relativeHumidity.value))}%`
+          : "--";
+
+        $("pressure").textContent = isNumber(observation.barometricPressure?.value)
+          ? `${Math.round(Number(observation.barometricPressure.value) / 100)} hPa`
+          : "--";
+      } catch (error) {
+        console.error("Current conditions error:", error);
+        renderCurrentUnavailable();
+      }
+    }
+
+    async function loadHourlyForecast(url) {
+      try {
+        const data = await nwsFetch(url);
+
+        const periods = Array.isArray(data.properties?.periods)
+          ? data.properties.periods.slice(0, 24)
+          : [];
+
+        if (!periods.length) {
+          throw new Error("No hourly forecast periods returned.");
+        }
+
+        $("hourly").innerHTML = "";
+
+        periods.forEach(function (period, index) {
+          const element = document.createElement("div");
+
+          const time = index === 0
+            ? "NOW"
+            : new Date(period.startTime).toLocaleTimeString([], {
+              hour: "numeric"
+            });
+
+          element.className = "hour";
+
+          element.innerHTML = `
+            <div class="hour-time">${escapeHtml(time)}</div>
+            <div class="hour-temp">${isNumber(period.temperature) ? `${Math.round(Number(period.temperature))}°` : "--"}</div>
+            <div class="hour-icon">${weatherIcon(period.shortForecast)}</div>
+            <div class="hour-text">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
+            <div class="hour-wind">💧 ${isNumber(period.probabilityOfPrecipitation?.value) ? `${Math.round(Number(period.probabilityOfPrecipitation.value))}%` : "--"}</div>
+            <div class="hour-wind">💨 ${escapeHtml(safeText(period.windSpeed, "--"))}</div>
+          `;
+
+          $("hourly").appendChild(element);
+        });
+      } catch (error) {
+        console.error("Hourly forecast error:", error);
+
+        $("hourly").innerHTML = `
+          <div class="empty">Hourly forecast temporarily unavailable.</div>
+        `;
+      }
+    }
+
+    async function loadSevenDayForecast(url) {
+      try {
+        const data = await nwsFetch(url);
+
+        let periods = Array.isArray(data.properties?.periods)
+          ? data.properties.periods.filter(function (period) {
+            return period.isDaytime === true;
+          }).slice(0, 7)
+          : [];
+
+        if (!periods.length) {
+          periods = data.properties?.periods?.slice(0, 7) || [];
+        }
+
+        if (!periods.length) {
+          throw new Error("No daily forecast periods returned.");
+        }
+
+        $("daily").innerHTML = "";
+
+        periods.forEach(function (period) {
+          const forecastDate = period.startTime
+            ? period.startTime.slice(0, 10)
+            : "";
+
+          const matchingWarn = (
+            activeChamiWarn &&
+            activeChamiWarn.active === true &&
+            activeChamiWarn.alertDate === forecastDate
+          );
+
+          const badge = activeChamiWarn?.level === "ALERT"
+            ? "CHAMIALERT"
+            : activeChamiWarn?.level === "WATCH"
+              ? "CHAMIWATCH"
+              : "CHAMIWARN";
+
+          const element = document.createElement("div");
+          element.className = "day";
+
+          element.innerHTML = `
+            <div class="day-name">
+              ${escapeHtml(safeText(period.name, "Forecast"))}
+              ${matchingWarn ? `<span class="chami-badge">${badge}</span>` : ""}
+            </div>
+
+            <div style="font-size:21px;">${weatherIcon(period.shortForecast)}</div>
+
+            <div class="day-temp">
+              ${isNumber(period.temperature) ? `${Math.round(Number(period.temperature))}°` : "--"}
+            </div>
+
+            <div class="day-desc">
+              ${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}
+            </div>
+          `;
+
+          $("daily").appendChild(element);
+        });
+      } catch (error) {
+        console.error("Seven-day forecast error:", error);
+
+        $("daily").innerHTML = `
+          <div class="empty">Seven-day forecast temporarily unavailable.</div>
+        `;
+      }
+    }
+
+    async function loadAlerts() {
+      try {
+        const data = await nwsFetch(
+          `https://api.weather.gov/alerts/active?point=${LAT},${LON}`
+        );
+
+        alertLayers.forEach(function (layer) {
+          if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
+          }
+        });
+
+        alertLayers = [];
+
+        const alerts = Array.isArray(data.features) ? data.features : [];
+
+        if (!alerts.length) {
+          $("alerts").innerHTML = `
+            <div class="empty">✅ No active NWS alerts for the Chaminade area.</div>
+          `;
+
+          return;
+        }
+
+        $("alerts").innerHTML = "";
+
+        alerts.forEach(function (feature) {
+          const props = feature.properties || {};
+          const element = document.createElement("div");
+
+          element.className = "nws-alert";
+          element.innerHTML = `
+            <strong>⚠️ ${escapeHtml(safeText(props.event, "Weather Alert"))}</strong>
+            <p>${escapeHtml(safeText(props.headline, "Active weather alert."))}</p>
+          `;
+
+          $("alerts").appendChild(element);
+
+          if (feature.geometry) {
+            try {
+              const polygon = L.geoJSON(feature, {
+                pane: "alertPane",
+                style: {
+                  color: "#ef2626",
+                  weight: 3,
+                  fillColor: "#ef2626",
+                  fillOpacity: 0.12
+                }
+              }).addTo(map);
+
+              alertLayers.push(polygon);
+            } catch (error) {
+              console.warn("NWS alert polygon error:", error);
+            }
+          }
+        });
+      } catch (error) {
+        console.error("NWS alerts error:", error);
+
+        $("alerts").innerHTML = `
+          <div class="empty">Unable to load active NWS alerts.</div>
+        `;
+      }
+    }
+
+    $("signInButton").addEventListener("click", async function () {
+      const email = $("email").value.trim();
+      const password = $("password").value;
+
+      $("loginMessage").textContent = "";
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        console.error("Firebase sign-in error:", error);
+        $("loginMessage").textContent = error.message;
+        $("loginMessage").style.color = "#ff8c8c";
+      }
+    });
+
+    $("signOutButton").addEventListener("click", function () {
+      signOut(auth);
+    });
+
+    $("radarSite").addEventListener("change", updateRadarSite);
+
+    $("radarOpacity").addEventListener("input", function () {
+      if (radarLayer) {
+        radarLayer.setOpacity(Number(this.value) / 100);
+      }
+    });
+
+    $("ringsButton").addEventListener("click", function () {
+      ringsVisible = !ringsVisible;
+
+      rangeRings.forEach(function (ring) {
+        if (ringsVisible) {
+          ring.addTo(map);
+        } else {
+          map.removeLayer(ring);
+        }
+      });
+
+      $("ringsButton").textContent = `Rings: ${ringsVisible ? "On" : "Off"}`;
+    });
+
+    $("homeButton").addEventListener("click", function () {
+      map.flyTo([LAT, LON], 9, {
+        duration: 0.7
+      });
+    });
+
+    document.querySelectorAll(".mode").forEach(function (button) {
+      button.addEventListener("click", function () {
+        setMode(button.dataset.mode);
+      });
+    });
+
+    $("playRadar").addEventListener("click", function () {
+      if (radarPlaying) {
+        pauseRadar();
+      } else {
+        playRadar();
+      }
+    });
+
+    $("previousRadar").addEventListener("click", function () {
+      if (!radarFrames.length || selectedMode !== "MOSAIC") {
+        return;
+      }
+
+      pauseRadar();
+
+      radarIndex = (radarIndex - 1 + radarFrames.length) % radarFrames.length;
+      showRainViewerFrame(radarIndex);
+    });
+
+    $("nextRadar").addEventListener("click", function () {
+      if (!radarFrames.length || selectedMode !== "MOSAIC") {
+        return;
+      }
+
+      pauseRadar();
+
+      radarIndex = (radarIndex + 1) % radarFrames.length;
+      showRainViewerFrame(radarIndex);
+    });
+
+    $("latestRadar").addEventListener("click", function () {
+      if (!radarFrames.length || selectedMode !== "MOSAIC") {
+        return;
+      }
+
+      pauseRadar();
+
+      radarIndex = radarFrames.length - 1;
+      showRainViewerFrame(radarIndex);
+    });
+
+    $("warnDate").value = new Date().toISOString().slice(0, 10);
+
+    $("publishWarn").addEventListener("click", async function () {
+      const headline = $("warnHeadline").value.trim();
+
+      if (!headline) {
+        $("warnMessage").textContent = "A ChamiWARN headline is required.";
+        $("warnMessage").style.color = "#ff8c8c";
+        return;
+      }
+
+      try {
+        await setDoc(chamiWarnRef, {
+          active: true,
+          level: $("warnLevel").value,
+          alertDate: $("warnDate").value,
+          headline: headline,
+          details: $("warnDetails").value.trim(),
+          issuedBy: auth.currentUser.email,
+          issuedAt: serverTimestamp()
+        });
+
+        $("warnMessage").textContent =
+          "Public ChamiWARN status published or updated successfully.";
+
+        $("warnMessage").style.color = "#22c55e";
+      } catch (error) {
+        console.error("ChamiWARN publish error:", error);
+
+        $("warnMessage").textContent =
+          `Unable to publish: ${error.message}`;
+
+        $("warnMessage").style.color = "#ff8c8c";
+      }
+    });
+
+    $("removeWarn").addEventListener("click", async function () {
+      try {
+        await deleteDoc(chamiWarnRef);
+
+        $("warnMessage").textContent =
+          "ChamiWARN has been removed from the public Basic site.";
+
+        $("warnMessage").style.color = "#22c55e";
+      } catch (error) {
+        console.error("ChamiWARN remove error:", error);
+
+        $("warnMessage").textContent =
+          `Unable to remove: ${error.message}`;
+
+        $("warnMessage").style.color = "#ff8c8c";
+      }
+    });
+
+    onSnapshot(
+      chamiWarnRef,
+      function (snapshot) {
+        activeChamiWarn = snapshot.exists() ? snapshot.data() : null;
+
+        renderChamiWarn();
+
+        if ($("daily").children.length) {
+          loadWeather();
+        }
+      },
+      function (error) {
+        console.error("ChamiWARN Firebase listener error:", error);
+      }
+    );
+
+    onAuthStateChanged(auth, function (user) {
+      if (!isAdmin(user)) {
+        $("premiumApp").classList.add("hidden");
+        $("loginScreen").classList.remove("hidden");
+
+        if (user) {
+          $("loginMessage").textContent =
+            "This Firebase account is not an authorized StormSignal administrator.";
+
+          $("loginMessage").style.color = "#ff8c8c";
+
+          signOut(auth);
+        }
+
+        return;
+      }
+
+      $("loginScreen").classList.add("hidden");
+      $("premiumApp").classList.remove("hidden");
+
+      if (!map) {
+        initMap();
+        loadRainViewer();
+        loadWeather();
+        loadAlerts();
+
+        setInterval(loadRainViewer, 10 * 60 * 1000);
+
+        setInterval(function () {
+          loadWeather();
+          loadAlerts();
+        }, 5 * 60 * 1000);
+      }
+    });
+
+    window.addEventListener("beforeunload", pauseRadar);
+  </script>
+</body>
+</html>
