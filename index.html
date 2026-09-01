@@ -1,1 +1,1266 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StormSignal</title><link rel="icon" href="logo.png"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f6f6;color:#111}header{padding:16px 5%;background:#fff;border-bottom:3px solid #e31818}h1{margin:0;letter-spacing:1px}header p{margin:4px 0 0;color:#e31818;font-size:10px;font-weight:bold}.wrap{width:min(1400px,94%);margin:20px auto}.card{background:#fff;border:1px solid #e5e5e5;border-radius:13px;overflow:hidden;margin:16px 0;box-shadow:0 4px 15px #0001}.title{padding:15px;border-bottom:1px solid #e5e5e5;font-size:13px;font-weight:bold}#map{height:500px}.warn{padding:14px;background:#ad1212;color:#fff;border-radius:10px;margin-bottom:16px;line-height:1.45;font-size:13px}.hide{display:none}.row{display:flex;gap:8px;align-items:center;padding:11px;border-top:1px solid #e5e5e5}button,input,select,textarea{padding:9px;border:1px solid #ddd;border-radius:7px;font:inherit}button{cursor:pointer;font-weight:bold;background:#fff}.red{background:#e31818;color:#fff;border-color:#e31818}.time{margin-left:auto;font-size:11px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.current{padding:18px}.temp{font-size:55px;font-weight:bold}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:15px}.stat{padding:10px;background:#fafafa;border:1px solid #eee;border-radius:8px;font-size:11px}.stat small{display:block;color:#777}.hourly,.days{display:flex;overflow-x:auto}.hour{min-width:100px;padding:14px 8px;text-align:center;border-right:1px solid #eee;font-size:11px}.hour b{display:block;font-size:23px;margin:9px}.day{min-width:140px;padding:14px;text-align:center;border-right:1px solid #eee;font-size:11px}.badge{display:inline-block;margin-top:7px;padding:3px 6px;background:#e31818;color:#fff;border-radius:4px;font-size:8px;font-weight:bold}.empty{padding:22px;color:#777;text-align:center}@media(max-width:700px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}#map{height:390px}}</style></head><body><header><h1>STORMSIGNAL</h1><p>CHAMINADE • ST. LOUIS</p></header><main class="wrap"><div id="warn" class="warn hide"></div><section class="card"><div class="title">📡 LIVE RADAR <span id="rs" style="float:right">LOADING</span></div><div id="map"></div><div class="row"><button id="pr">‹</button><button id="play" class="red">▶ Play</button><button id="nx">›</button><button id="last">Latest</button><span class="time" id="rt">Loading…</span></div></section><div class="grid"><section class="card"><div class="title">🌡️ CURRENT CONDITIONS</div><div class="current"><span class="temp" id="temp">--</span><b id="cond">Loading…</b><div class="stats"><div class="stat"><small>Feels like</small><b id="feel">--</b></div><div class="stat"><small>Wind</small><b id="wind">--</b></div><div class="stat"><small>Humidity</small><b id="hum">--</b></div><div class="stat"><small>Pressure</small><b id="pres">--</b></div></div></div></section><section class="card"><div class="title">⚠️ ACTIVE NWS ALERTS</div><div id="alerts" class="empty">Loading alerts…</div></section></div><section class="card"><div class="title">🕐 24-HOUR FORECAST</div><div class="hourly" id="hourly"><div class="empty">Loading hourly forecast…</div></div></section><section class="card"><div class="title">🌦️ 7-DAY FORECAST</div><div class="days" id="days"><div class="empty">Loading seven-day forecast…</div></div></section></main><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script type="module">import{initializeApp}from"https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";import{getFirestore,doc,onSnapshot}from"https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";const firebaseConfig={apiKey:"AIzaSyAJ4vOeQrUDY1f9O3-3zGF1oCgptP7ePQw",authDomain:"stormsignal-premium.firebaseapp.com",projectId:"stormsignal-premium",storageBucket:"stormsignal-premium.firebasestorage.app",messagingSenderId:"104140219197",appId:"1:104140219197:web:6cb2a20673130ae48c5b54"};const db=getFirestore(initializeApp(firebaseConfig)),wr=doc(db,"public_status","chamiwarn"),LAT=38.6273,LON=-90.339,$=x=>document.getElementById(x);let w=null,host='',fs=[],i=0,rl,timer,run=false;const map=L.map('map',{center:[LAT,LON],zoom:9,minZoom:7,maxZoom:10});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10,attribution:'© OpenStreetMap'}).addTo(map);map.createPane('radar');map.getPane('radar').style.zIndex=350;map.getPane('radar').style.pointerEvents='none';L.marker([LAT,LON]).addTo(map).bindPopup('Chaminade');const icon=t=>{t=(t||'').toLowerCase();return t.includes('thunder')?'⛈️':t.includes('snow')?'❄️':t.includes('rain')||t.includes('shower')?'🌧️':t.includes('cloud')?'☁️':t.includes('clear')||t.includes('sunny')?'☀️':'🌤️'};const esc=s=>String(s??'--').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function banner(){if(!w?.active||w.expiresAt?.toDate?.()<new Date())return $('warn').classList.add('hide');$('warn').innerHTML=`<b>CHAMI${w.level} DAY — ${esc(w.alertDate)}</b><br>${esc(w.headline)}${w.details?'<br>'+esc(w.details):''}<br><small>Unofficial StormSignal informational status. Follow NWS and Chaminade guidance.</small>`;$('warn').classList.remove('hide')}onSnapshot(wr,s=>{w=s.exists()?s.data():null;banner();daily()},e=>console.error('ChamiWARN:',e));function show(){if(rl)map.removeLayer(rl);let f=fs[i];rl=L.tileLayer(`${host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`,{pane:'radar',opacity:.82,maxZoom:10,maxNativeZoom:7,attribution:'Radar © RainViewer'}).addTo(map);$('rt').textContent=new Date(f.time*1000).toLocaleString([] ,{weekday:'short',hour:'numeric',minute:'2-digit'})}async function radar(){try{let r=await fetch('https://api.rainviewer.com/public/weather-maps.json',{cache:'no-store'}),d=await r.json();if(!r.ok||!d.host||!d.radar?.past?.length)throw Error('metadata');host=d.host.replace(/\/$/,'');fs=d.radar.past;i=fs.length-1;show();$('rs').textContent='LIVE'}catch(e){console.error(e);$('rs').textContent='RADAR UNAVAILABLE'}}function pause(){run=false;$('play').textContent='▶ Play';clearInterval(timer)}$('play').onclick=()=>{if(!fs.length)return;if(run)return pause();run=true;$('play').textContent='❚❚ Pause';timer=setInterval(()=>{i=(i+1)%fs.length;show()},700)};$('pr').onclick=()=>{if(fs.length){pause();i=(i-1+fs.length)%fs.length;show()}};$('nx').onclick=()=>{if(fs.length){pause();i=(i+1)%fs.length;show()}};$('last').onclick=()=>{if(fs.length){pause();i=fs.length-1;show()}};async function json(u){let r=await fetch(u,{headers:{Accept:'application/geo+json'}});if(!r.ok)throw Error(r.status);return r.json()}async function weather(){try{let p=await json(`https://api.weather.gov/points/${LAT},${LON}`);hourly(p.properties.forecastHourly);daily(p.properties.forecast);let ss=await json(p.properties.observationStations),o;for(const s of ss.features.slice(0,6)){try{let q=await json(s.id+'/observations/latest');if(q.properties?.temperature?.value!=null){o=q.properties;break}}catch(e){}}if(o){let f=c=>Math.round(c*9/5+32),t=f(o.temperature.value),x=o.heatIndex?.value??o.windChill?.value;$('temp').textContent=t+'°';$('cond').textContent=o.textDescription||'--';$('feel').textContent=(x!=null?f(x):t)+'°';$('wind').textContent=o.windSpeed?.value!=null?Math.round(o.windSpeed.value*.621)+' mph':'--';$('hum').textContent=o.relativeHumidity?.value!=null?Math.round(o.relativeHumidity.value)+'%':'--';$('pres').textContent=o.barometricPressure?.value!=null?Math.round(o.barometricPressure.value/100)+' hPa':'--'}}catch(e){console.error('weather',e)}}async function hourly(u){try{let d=await json(u),a=d.properties.periods.slice(0,24);$('hourly').innerHTML=a.map((p,n)=>`<div class="hour">${n?'': 'NOW'}<b>${p.temperature??'--'}°</b><div>${icon(p.shortForecast)}</div><small>${esc(p.shortForecast)}</small><br>💧${p.probabilityOfPrecipitation?.value??'--'}%<br>💨${esc(p.windSpeed)}</div>`).join('')}catch(e){$('hourly').innerHTML='<div class="empty">Hourly forecast unavailable.</div>'}}async function daily(u){if(!u)return;try{let d=await json(u),a=d.properties.periods.filter(x=>x.isDaytime).slice(0,7);$('days').innerHTML=a.map(p=>{let hit=w?.active&&p.startTime.slice(0,10)===w.alertDate;return `<div class="day"><b>${esc(p.name)}</b><div style="font-size:26px;margin:9px">${icon(p.shortForecast)}</div><b>${p.temperature??'--'}°</b><div>${esc(p.shortForecast)}</div>${hit?'<span class="badge">CHAMI'+w.level+'</span>':''}</div>`}).join('')}catch(e){$('days').innerHTML='<div class="empty">Seven-day forecast unavailable.</div>'}}async function alerts(){try{let d=await json(`https://api.weather.gov/alerts/active?point=${LAT},${LON}`);$('alerts').innerHTML=d.features.length?d.features.map(x=>`<div style="padding:12px;border-bottom:1px solid #eee"><b style="color:#e31818">${esc(x.properties.event)}</b><br><small>${esc(x.properties.headline)}</small></div>`).join(''):'<div class="empty">✅ No active alerts.</div>'}catch(e){$('alerts').textContent='Alerts unavailable.'}}radar();weather();alerts();setInterval(radar,600000);setInterval(weather,300000);setInterval(alerts,300000);</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>StormSignal | Chaminade Weather</title>
+
+  <link rel="icon" href="logo.png" type="image/png">
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <style>
+    :root {
+      --red: #e31818;
+      --dark-red: #b90f0f;
+      --orange: #e77800;
+      --gold: #c58d00;
+      --white: #ffffff;
+      --black: #111111;
+      --gray: #777777;
+      --light: #f6f6f6;
+      --border: #e5e5e5;
+      --green: #19a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--light);
+      color: var(--black);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    header {
+      height: 72px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--white);
+      border-bottom: 3px solid var(--red);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .brand h1 {
+      font-size: 21px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+    }
+
+    .brand p {
+      margin-top: 3px;
+      color: var(--red);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #555555;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .live-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px #e9f8ee;
+    }
+
+    main {
+      width: min(1450px, calc(100% - 36px));
+      margin: auto;
+      padding: 28px 0 45px;
+    }
+
+    .heading {
+      margin-bottom: 20px;
+    }
+
+    .heading h2 {
+      font-size: 30px;
+      font-weight: 850;
+    }
+
+    .heading p {
+      margin-top: 5px;
+      color: var(--gray);
+      font-size: 14px;
+    }
+
+    .card {
+      margin-bottom: 20px;
+      overflow: hidden;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.06);
+    }
+
+    .card-title {
+      min-height: 56px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .chamiwarn-banner {
+      display: none;
+      margin-bottom: 20px;
+      padding: 16px 18px;
+      color: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 16px rgba(0, 0, 0, 0.12);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .chamiwarn-banner strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+
+    .chamiwarn-banner small {
+      display: block;
+      margin-top: 8px;
+      opacity: 0.9;
+      font-size: 10px;
+    }
+
+    .chamiwatch {
+      background: #b98500;
+      border: 1px solid #e1bb37;
+    }
+
+    .chamiwarn {
+      background: #cb6300;
+      border: 1px solid #f09c43;
+    }
+
+    .chamialert {
+      background: #a61010;
+      border: 1px solid #ef5858;
+    }
+
+    #map {
+      width: 100%;
+      height: 570px;
+      background: white;
+    }
+
+    .leaflet-container {
+      background: white !important;
+      font-family: inherit;
+    }
+
+    .leaflet-control-zoom a {
+      color: var(--red) !important;
+    }
+
+    .radar-controls {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .radar-button {
+      min-width: 38px;
+      height: 38px;
+      padding: 0 12px;
+      color: #222;
+      background: white;
+      border: 1px solid #d8d8d8;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 750;
+    }
+
+    .radar-button:hover:not(:disabled) {
+      color: var(--red);
+      border-color: var(--red);
+    }
+
+    .radar-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .radar-button.play {
+      color: white;
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    .radar-time {
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .radar-time small {
+      display: block;
+      color: #999;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .radar-time strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 16px;
+      color: #777;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+    }
+
+    .legend-bar {
+      width: 170px;
+      height: 8px;
+      border-radius: 20px;
+      background: linear-gradient(90deg, #4ade80, #facc15, #fb923c, #ef4444, #c026d3);
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 20px;
+    }
+
+    .current {
+      padding: 24px;
+    }
+
+    .current-main {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .temperature {
+      font-size: 62px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -3px;
+    }
+
+    .condition {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .location {
+      margin-top: 5px;
+      color: #888;
+      font-size: 12px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    .stat {
+      padding: 13px;
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      margin-top: 6px;
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .alerts {
+      max-height: 285px;
+      overflow-y: auto;
+    }
+
+    .alert {
+      padding: 14px 16px;
+      border-bottom: 1px solid #eee;
+      border-left: 4px solid var(--red);
+    }
+
+    .alert-event {
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .alert-headline {
+      margin-top: 5px;
+      color: #444;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .empty {
+      width: 100%;
+      padding: 28px 18px;
+      color: #777;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .hourly-wrapper,
+    .forecast-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .hourly {
+      display: flex;
+      min-width: max-content;
+    }
+
+    .hour {
+      width: 105px;
+      min-height: 190px;
+      padding: 17px 9px;
+      text-align: center;
+      border-right: 1px solid #eee;
+    }
+
+    .hour:first-child {
+      background: #fff4f4;
+    }
+
+    .hour-time {
+      color: #555;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .hour-temp {
+      margin-top: 12px;
+      font-size: 25px;
+      font-weight: 900;
+    }
+
+    .hour-icon {
+      margin: 8px 0;
+      font-size: 28px;
+    }
+
+    .hour-condition {
+      min-height: 30px;
+      color: #777;
+      font-size: 9px;
+      line-height: 1.3;
+    }
+
+    .hour-rain {
+      margin-top: 9px;
+      color: var(--red);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .hour-wind {
+      margin-top: 7px;
+      color: #777;
+      font-size: 10px;
+    }
+
+    .forecast {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      min-width: 700px;
+    }
+
+    .forecast-day {
+      min-height: 165px;
+      padding: 18px 10px;
+      text-align: center;
+      border-right: 1px solid #eee;
+    }
+
+    .forecast-name {
+      color: #777;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .forecast-icon {
+      margin: 15px 0 8px;
+      font-size: 30px;
+    }
+
+    .forecast-temp {
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .forecast-description {
+      margin-top: 7px;
+      color: #777;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .chami-badge {
+      display: inline-block;
+      margin-top: 7px;
+      padding: 3px 6px;
+      color: white;
+      border-radius: 4px;
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-watch {
+      background: #b98500;
+    }
+
+    .badge-warn {
+      background: #cb6300;
+    }
+
+    .badge-alert {
+      background: #a61010;
+    }
+
+    footer {
+      padding: 25px;
+      color: #999;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    footer strong {
+      color: var(--red);
+    }
+
+    @media (max-width: 1000px) {
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      #map {
+        height: 470px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      header {
+        height: 65px;
+        padding: 0 14px;
+      }
+
+      .live {
+        display: none;
+      }
+
+      main {
+        width: calc(100% - 20px);
+        padding-top: 18px;
+      }
+
+      #map {
+        height: 400px;
+      }
+
+      .radar-controls {
+        flex-wrap: wrap;
+      }
+
+      .radar-time {
+        width: 100%;
+        margin-left: 0;
+        text-align: left;
+      }
+
+      .temperature {
+        font-size: 50px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="brand">
+      <img src="logo.png" class="logo" alt="StormSignal logo">
+
+      <div>
+        <h1>STORMSIGNAL</h1>
+        <p>CHAMINADE • ST. LOUIS</p>
+      </div>
+    </div>
+
+    <div class="live">
+      <span class="live-dot"></span>
+      LIVE WEATHER
+    </div>
+  </header>
+
+  <main>
+    <div class="chamiwarn-banner" id="chamiWarnBanner"></div>
+
+    <div class="heading">
+      <h2>Chaminade Weather</h2>
+      <p>Live radar, hourly conditions, forecasts and severe weather.</p>
+    </div>
+
+    <section class="card">
+      <div class="card-title">
+        📡 LIVE RADAR
+        <span id="radarStatus" style="margin-left:auto; color:#e08a00; font-size:10px;">
+          ● LOADING
+        </span>
+      </div>
+
+      <div id="map"></div>
+
+      <div class="radar-controls">
+        <button class="radar-button" id="previousRadar" type="button">‹</button>
+        <button class="radar-button play" id="playRadar" type="button">▶ Play</button>
+        <button class="radar-button" id="nextRadar" type="button">›</button>
+        <button class="radar-button" id="latestRadar" type="button">Latest</button>
+
+        <div class="radar-time">
+          <small>Radar time</small>
+          <strong id="radarTime">Loading...</strong>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span>Light</span>
+        <div class="legend-bar"></div>
+        <span>Heavy</span>
+        <span>Reflectivity</span>
+      </div>
+    </section>
+
+    <div class="two-column">
+      <section class="card">
+        <div class="card-title">🌡️ CURRENT CONDITIONS</div>
+
+        <div class="current">
+          <div class="current-main">
+            <div class="temperature" id="temperature">--</div>
+
+            <div>
+              <div class="condition" id="condition">Loading...</div>
+              <div class="location">Chaminade • St. Louis, Missouri</div>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Feels Like</div>
+              <div class="stat-value" id="feels">--</div>
+            </div>
+
+            <div class="stat">
+              <div class="stat-label">Wind</div>
+              <div class="stat-value" id="wind">--</div>
+            </div>
+
+            <div class="stat">
+              <div class="stat-label">Humidity</div>
+              <div class="stat-value" id="humidity">--</div>
+            </div>
+
+            <div class="stat">
+              <div class="stat-label">Pressure</div>
+              <div class="stat-value" id="pressure">--</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title">⚠️ ACTIVE NWS ALERTS</div>
+
+        <div class="alerts" id="alerts">
+          <div class="empty">Loading active alerts...</div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-title">
+        🕐 24-HOUR FORECAST
+        <span style="margin-left:auto; color:#999; font-size:10px;">Scroll horizontally →</span>
+      </div>
+
+      <div class="hourly-wrapper">
+        <div class="hourly" id="hourly">
+          <div class="empty">Loading hourly forecast...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title">🌦️ 7-DAY FORECAST</div>
+
+      <div class="forecast-wrapper">
+        <div class="forecast" id="forecast">
+          <div class="empty">Loading seven-day forecast...</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>StormSignal</strong>
+    • Weather data from National Weather Service / NOAA
+    • Radar imagery from RainViewer
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAJ4vOeQrUDY1f9O3-3zGF1oCgptP7ePQw",
+      authDomain: "stormsignal-premium.firebaseapp.com",
+      projectId: "stormsignal-premium",
+      storageBucket: "stormsignal-premium.firebasestorage.app",
+      messagingSenderId: "104140219197",
+      appId: "1:104140219197:web:6cb2a20673130ae48c5b54"
+    };
+
+    const LAT = 38.6273;
+    const LON = -90.3390;
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const db = getFirestore(firebaseApp);
+    const chamiWarnRef = doc(db, "public_status", "chamiwarn");
+
+    let activeChamiWarn = null;
+    let forecastUrl = "";
+    let radarLayer = null;
+    let radarFrames = [];
+    let radarHost = "";
+    let radarIndex = 0;
+    let radarTimer = null;
+    let radarPlaying = false;
+    let alertLayers = [];
+
+    const $ = function (id) {
+      return document.getElementById(id);
+    };
+
+    const map = L.map("map", {
+      center: [LAT, LON],
+      zoom: 9,
+      minZoom: 7,
+      maxZoom: 10
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 10,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    map.createPane("radarPane");
+    map.getPane("radarPane").style.zIndex = "350";
+    map.getPane("radarPane").style.pointerEvents = "none";
+
+    map.createPane("alertPane");
+    map.getPane("alertPane").style.zIndex = "425";
+    map.getPane("alertPane").style.pointerEvents = "none";
+
+    L.marker([LAT, LON])
+      .addTo(map)
+      .bindPopup("<b>Chaminade</b><br>StormSignal home area");
+
+    function safeText(value, fallback = "--") {
+      if (value === null || value === undefined) {
+        return fallback;
+      }
+
+      const text = String(value).trim();
+      return text || fallback;
+    }
+
+    function escapeHtml(value) {
+      return safeText(value, "").replace(/[&<>"']/g, function (character) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;"
+        }[character];
+      });
+    }
+
+    function isNumber(value) {
+      return value !== null && value !== undefined && Number.isFinite(Number(value));
+    }
+
+    function fahrenheit(celsius) {
+      return isNumber(celsius)
+        ? Math.round((Number(celsius) * 9 / 5) + 32)
+        : null;
+    }
+
+    function weatherIcon(text) {
+      const value = String(text || "").toLowerCase();
+
+      if (value.includes("thunder")) return "⛈️";
+      if (value.includes("snow") || value.includes("sleet") || value.includes("ice")) return "❄️";
+      if (value.includes("rain") || value.includes("shower") || value.includes("drizzle")) return "🌧️";
+      if (value.includes("fog") || value.includes("haze")) return "🌫️";
+      if (value.includes("cloud") || value.includes("overcast")) return "☁️";
+      if (value.includes("clear") || value.includes("sunny")) return "☀️";
+
+      return "🌤️";
+    }
+
+    async function nwsFetch(url) {
+      const response = await fetch(url, {
+        headers: {
+          "Accept": "application/geo+json"
+        },
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(`NWS HTTP ${response.status}`);
+      }
+
+      return response.json();
+    }
+
+    function chamiLevelLabel(level) {
+      if (level === "WATCH") return "CHAMIWATCH DAY";
+      if (level === "ALERT") return "CHAMIALERT DAY";
+      return "CHAMIWARN DAY";
+    }
+
+    function chamiClass(level) {
+      if (level === "WATCH") return "chamiwatch";
+      if (level === "ALERT") return "chamialert";
+      return "chamiwarn";
+    }
+
+    function badgeClass(level) {
+      if (level === "WATCH") return "badge-watch";
+      if (level === "ALERT") return "badge-alert";
+      return "badge-warn";
+    }
+
+    function renderChamiWarn() {
+      const banner = $("chamiWarnBanner");
+
+      if (!activeChamiWarn || activeChamiWarn.active !== true) {
+        banner.style.display = "none";
+        banner.className = "chamiwarn-banner";
+        banner.innerHTML = "";
+        return;
+      }
+
+      banner.className = `chamiwarn-banner ${chamiClass(activeChamiWarn.level)}`;
+
+      banner.innerHTML = `
+        <strong>${escapeHtml(chamiLevelLabel(activeChamiWarn.level))} — ${escapeHtml(activeChamiWarn.alertDate)}</strong>
+        ${escapeHtml(activeChamiWarn.headline)}
+        ${activeChamiWarn.details ? `<br>${escapeHtml(activeChamiWarn.details)}` : ""}
+        <small>
+          StormSignal informational status only. Follow official NWS alerts
+          and Chaminade administration guidance for official actions.
+        </small>
+      `;
+
+      banner.style.display = "block";
+    }
+
+    onSnapshot(
+      chamiWarnRef,
+      function (snapshot) {
+        activeChamiWarn = snapshot.exists() ? snapshot.data() : null;
+        renderChamiWarn();
+
+        /*
+          Critical fix:
+          The stored forecast URL is used here, so the matching ChamiWARN
+          badge re-renders immediately when Firebase changes.
+        */
+        if (forecastUrl) {
+          loadSevenDayForecast(forecastUrl);
+        }
+      },
+      function (error) {
+        console.error("StormSignal ChamiWARN Firebase error:", error);
+      }
+    );
+
+    function removeRadarLayer() {
+      if (radarLayer && map.hasLayer(radarLayer)) {
+        map.removeLayer(radarLayer);
+      }
+
+      radarLayer = null;
+    }
+
+    function showRadarFrame(index) {
+      if (!radarFrames.length || !radarFrames[index]) {
+        return;
+      }
+
+      const frame = radarFrames[index];
+      const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+
+      removeRadarLayer();
+
+      radarLayer = L.tileLayer(tileUrl, {
+        pane: "radarPane",
+        opacity: 0.82,
+        maxZoom: 10,
+        maxNativeZoom: 7,
+        noWrap: true,
+        attribution: "Radar © RainViewer"
+      });
+
+      radarLayer.addTo(map);
+
+      radarIndex = index;
+
+      $("radarTime").textContent =
+        new Date(Number(frame.time) * 1000).toLocaleString([], {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit"
+        });
+
+      $("radarStatus").textContent = "● LIVE";
+      $("radarStatus").style.color = "#19a34a";
+    }
+
+    async function loadRadar() {
+      $("radarStatus").textContent = "● LOADING";
+      $("radarStatus").style.color = "#e08a00";
+
+      try {
+        const response = await fetch(
+          "https://api.rainviewer.com/public/weather-maps.json",
+          {
+            cache: "no-store"
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`RainViewer HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.host || !Array.isArray(data.radar?.past)) {
+          throw new Error("RainViewer metadata did not include usable radar data.");
+        }
+
+        radarHost = data.host.replace(/\/$/, "");
+
+        radarFrames = data.radar.past.filter(function (frame) {
+          return frame && frame.path && isNumber(frame.time);
+        });
+
+        if (!radarFrames.length) {
+          throw new Error("No usable RainViewer radar frames.");
+        }
+
+        radarIndex = radarFrames.length - 1;
+        showRadarFrame(radarIndex);
+      } catch (error) {
+        console.error("StormSignal radar error:", error);
+
+        $("radarStatus").textContent = "● RADAR TEMPORARILY UNAVAILABLE";
+        $("radarStatus").style.color = "#e31818";
+        $("radarTime").textContent = "Unavailable";
+      }
+    }
+
+    function pauseRadar() {
+      radarPlaying = false;
+      $("playRadar").textContent = "▶ Play";
+
+      if (radarTimer !== null) {
+        clearInterval(radarTimer);
+        radarTimer = null;
+      }
+    }
+
+    function playRadar() {
+      if (!radarFrames.length) {
+        return;
+      }
+
+      pauseRadar();
+
+      radarPlaying = true;
+      $("playRadar").textContent = "❚❚ Pause";
+
+      radarTimer = setInterval(function () {
+        radarIndex = (radarIndex + 1) % radarFrames.length;
+        showRadarFrame(radarIndex);
+      }, 700);
+    }
+
+    $("playRadar").addEventListener("click", function () {
+      if (radarPlaying) {
+        pauseRadar();
+      } else {
+        playRadar();
+      }
+    });
+
+    $("previousRadar").addEventListener("click", function () {
+      if (!radarFrames.length) return;
+
+      pauseRadar();
+      radarIndex = (radarIndex - 1 + radarFrames.length) % radarFrames.length;
+      showRadarFrame(radarIndex);
+    });
+
+    $("nextRadar").addEventListener("click", function () {
+      if (!radarFrames.length) return;
+
+      pauseRadar();
+      radarIndex = (radarIndex + 1) % radarFrames.length;
+      showRadarFrame(radarIndex);
+    });
+
+    $("latestRadar").addEventListener("click", function () {
+      if (!radarFrames.length) return;
+
+      pauseRadar();
+      radarIndex = radarFrames.length - 1;
+      showRadarFrame(radarIndex);
+    });
+
+    function renderCurrentUnavailable() {
+      $("temperature").textContent = "--";
+      $("condition").textContent = "Weather unavailable";
+      $("feels").textContent = "--";
+      $("wind").textContent = "--";
+      $("humidity").textContent = "--";
+      $("pressure").textContent = "--";
+    }
+
+    async function loadCurrentConditions(stationsUrl) {
+      try {
+        const stationData = await nwsFetch(stationsUrl);
+        const stations = Array.isArray(stationData.features)
+          ? stationData.features.slice(0, 8)
+          : [];
+
+        let observation = null;
+
+        for (const station of stations) {
+          try {
+            const data = await nwsFetch(`${station.id}/observations/latest`);
+
+            if (isNumber(data.properties?.temperature?.value)) {
+              observation = data.properties;
+              break;
+            }
+          } catch (error) {
+            console.warn("NWS observation station error:", error);
+          }
+        }
+
+        if (!observation) {
+          throw new Error("No usable nearby NWS observation.");
+        }
+
+        const temp = fahrenheit(observation.temperature?.value);
+        const heat = fahrenheit(observation.heatIndex?.value);
+        const chill = fahrenheit(observation.windChill?.value);
+        const feels = heat ?? chill ?? temp;
+
+        $("temperature").textContent = temp === null ? "--" : `${temp}°`;
+        $("condition").textContent = safeText(observation.textDescription, "Conditions unavailable");
+        $("feels").textContent = feels === null ? "--" : `${feels}°`;
+
+        $("wind").textContent = isNumber(observation.windSpeed?.value)
+          ? `${Math.round(Number(observation.windSpeed.value) * 0.621371)} mph`
+          : "--";
+
+        $("humidity").textContent = isNumber(observation.relativeHumidity?.value)
+          ? `${Math.round(Number(observation.relativeHumidity.value))}%`
+          : "--";
+
+        $("pressure").textContent = isNumber(observation.barometricPressure?.value)
+          ? `${Math.round(Number(observation.barometricPressure.value) / 100)} hPa`
+          : "--";
+      } catch (error) {
+        console.error("Current conditions error:", error);
+        renderCurrentUnavailable();
+      }
+    }
+
+    async function loadHourlyForecast(url) {
+      try {
+        const data = await nwsFetch(url);
+
+        const periods = Array.isArray(data.properties?.periods)
+          ? data.properties.periods.slice(0, 24)
+          : [];
+
+        if (!periods.length) {
+          throw new Error("No hourly forecast periods.");
+        }
+
+        $("hourly").innerHTML = "";
+
+        periods.forEach(function (period, index) {
+          const hour = document.createElement("div");
+
+          const time = index === 0
+            ? "NOW"
+            : new Date(period.startTime).toLocaleTimeString([], {
+              hour: "numeric"
+            });
+
+          hour.className = "hour";
+
+          hour.innerHTML = `
+            <div class="hour-time">${escapeHtml(time)}</div>
+            <div class="hour-temp">${isNumber(period.temperature) ? `${Math.round(Number(period.temperature))}°` : "--"}</div>
+            <div class="hour-icon">${weatherIcon(period.shortForecast)}</div>
+            <div class="hour-condition">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
+            <div class="hour-rain">💧 ${isNumber(period.probabilityOfPrecipitation?.value) ? `${Math.round(Number(period.probabilityOfPrecipitation.value))}%` : "--"}</div>
+            <div class="hour-wind">💨 ${escapeHtml(safeText(period.windSpeed, "--"))}</div>
+          `;
+
+          $("hourly").appendChild(hour);
+        });
+      } catch (error) {
+        console.error("Hourly forecast error:", error);
+
+        $("hourly").innerHTML = `
+          <div class="empty">Hourly forecast temporarily unavailable.</div>
+        `;
+      }
+    }
+
+    async function loadSevenDayForecast(url) {
+      try {
+        const data = await nwsFetch(url);
+
+        let periods = Array.isArray(data.properties?.periods)
+          ? data.properties.periods.filter(function (period) {
+            return period.isDaytime === true;
+          }).slice(0, 7)
+          : [];
+
+        if (!periods.length) {
+          periods = data.properties?.periods?.slice(0, 7) || [];
+        }
+
+        if (!periods.length) {
+          throw new Error("No daily forecast periods.");
+        }
+
+        $("forecast").innerHTML = "";
+
+        periods.forEach(function (period) {
+          const dateKey = period.startTime ? period.startTime.slice(0, 10) : "";
+
+          const hasChamiWarn = (
+            activeChamiWarn &&
+            activeChamiWarn.active === true &&
+            activeChamiWarn.alertDate === dateKey
+          );
+
+          const badge = activeChamiWarn?.level === "WATCH"
+            ? "CHAMIWATCH"
+            : activeChamiWarn?.level === "ALERT"
+              ? "CHAMIALERT"
+              : "CHAMIWARN";
+
+          const element = document.createElement("div");
+          element.className = "forecast-day";
+
+          element.innerHTML = `
+            <div class="forecast-name">${escapeHtml(safeText(period.name, "Forecast"))}</div>
+            <div class="forecast-icon">${weatherIcon(period.shortForecast)}</div>
+            <div class="forecast-temp">${isNumber(period.temperature) ? `${Math.round(Number(period.temperature))}°` : "--"}</div>
+            <div class="forecast-description">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
+            ${hasChamiWarn ? `<span class="chami-badge ${badgeClass(activeChamiWarn.level)}">${badge}</span>` : ""}
+          `;
+
+          $("forecast").appendChild(element);
+        });
+      } catch (error) {
+        console.error("Seven-day forecast error:", error);
+
+        $("forecast").innerHTML = `
+          <div class="empty">Seven-day forecast temporarily unavailable.</div>
+        `;
+      }
+    }
+
+    async function loadAlerts() {
+      try {
+        const data = await nwsFetch(
+          `https://api.weather.gov/alerts/active?point=${LAT},${LON}`
+        );
+
+        alertLayers.forEach(function (layer) {
+          if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
+          }
+        });
+
+        alertLayers = [];
+
+        const alerts = Array.isArray(data.features) ? data.features : [];
+
+        if (!alerts.length) {
+          $("alerts").innerHTML = `
+            <div class="empty">✅ No active NWS alerts for the Chaminade area.</div>
+          `;
+
+          return;
+        }
+
+        $("alerts").innerHTML = "";
+
+        alerts.forEach(function (feature) {
+          const props = feature.properties || {};
+          const element = document.createElement("div");
+
+          element.className = "alert";
+          element.innerHTML = `
+            <div class="alert-event">⚠️ ${escapeHtml(safeText(props.event, "Weather Alert"))}</div>
+            <div class="alert-headline">${escapeHtml(safeText(props.headline, "Active weather alert."))}</div>
+          `;
+
+          $("alerts").appendChild(element);
+
+          if (feature.geometry) {
+            try {
+              const polygon = L.geoJSON(feature, {
+                pane: "alertPane",
+                style: {
+                  color: "#e31818",
+                  weight: 3,
+                  fillColor: "#e31818",
+                  fillOpacity: 0.12
+                }
+              }).addTo(map);
+
+              alertLayers.push(polygon);
+            } catch (error) {
+              console.warn("Alert polygon error:", error);
+            }
+          }
+        });
+      } catch (error) {
+        console.error("NWS alerts error:", error);
+
+        $("alerts").innerHTML = `
+          <div class="empty">Unable to load active NWS alerts.</div>
+        `;
+      }
+    }
+
+    async function loadWeather() {
+      try {
+        const point = await nwsFetch(
+          `https://api.weather.gov/points/${LAT},${LON}`
+        );
+
+        const properties = point.properties || {};
+
+        forecastUrl = properties.forecast || "";
+
+        if (properties.observationStations) {
+          loadCurrentConditions(properties.observationStations);
+        } else {
+          renderCurrentUnavailable();
+        }
+
+        if (properties.forecastHourly) {
+          loadHourlyForecast(properties.forecastHourly);
+        }
+
+        if (forecastUrl) {
+          loadSevenDayForecast(forecastUrl);
+        }
+      } catch (error) {
+        console.error("Weather lookup error:", error);
+        renderCurrentUnavailable();
+      }
+    }
+
+    loadRadar();
+    loadWeather();
+    loadAlerts();
+
+    setInterval(loadRadar, 10 * 60 * 1000);
+
+    setInterval(function () {
+      loadWeather();
+      loadAlerts();
+    }, 5 * 60 * 1000);
+
+    window.addEventListener("beforeunload", pauseRadar);
+  </script>
+</body>
+</html>
