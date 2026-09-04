@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta
+    name="description"
+    content="StormSignal Chaminade: live weather radar, NWS alerts, current conditions, and forecasts for St. Louis, Missouri."
+  >
 
   <title>StormSignal | Chaminade Weather</title>
 
@@ -11,6 +19,8 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ0YtQvFQwRMy6aKqI3TtAqM2RrjH3s="
+    crossorigin=""
   >
 
   <style>
@@ -18,13 +28,18 @@
       --red: #e31818;
       --dark-red: #b90f0f;
       --orange: #e77800;
-      --gold: #c58d00;
+      --gold: #b98500;
+      --green: #198c42;
+
       --white: #ffffff;
-      --black: #111111;
-      --gray: #777777;
+      --black: #151515;
+      --text-muted: #6d6d6d;
       --light: #f6f6f6;
+      --surface-alt: #fafafa;
       --border: #e5e5e5;
-      --green: #19a34a;
+
+      --radius: 15px;
+      --shadow: 0 6px 25px rgba(0, 0, 0, 0.06);
     }
 
     * {
@@ -33,18 +48,29 @@
       padding: 0;
     }
 
+    html {
+      background: var(--light);
+    }
+
     body {
+      min-width: 320px;
       background: var(--light);
       color: var(--black);
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      line-height: 1.4;
+    }
+
+    button {
+      font: inherit;
     }
 
     header {
-      height: 72px;
-      padding: 0 28px;
+      min-height: 72px;
+      padding: 10px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 16px;
       background: var(--white);
       border-bottom: 3px solid var(--red);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
@@ -53,36 +79,41 @@
     .brand {
       display: flex;
       align-items: center;
+      min-width: 0;
       gap: 12px;
     }
 
     .logo {
       width: 48px;
       height: 48px;
+      flex: 0 0 auto;
       object-fit: contain;
     }
 
     .brand h1 {
-      font-size: 21px;
+      font-size: clamp(17px, 2vw, 21px);
       font-weight: 900;
       letter-spacing: 1.5px;
+      line-height: 1;
     }
 
     .brand p {
-      margin-top: 3px;
+      margin-top: 5px;
       color: var(--red);
       font-size: 9px;
       font-weight: 800;
-      letter-spacing: 1.5px;
+      letter-spacing: 1.3px;
     }
 
     .live {
       display: flex;
+      flex: 0 0 auto;
       align-items: center;
       gap: 8px;
-      color: #555555;
+      color: #555;
       font-size: 11px;
       font-weight: 800;
+      white-space: nowrap;
     }
 
     .live-dot {
@@ -95,7 +126,7 @@
 
     main {
       width: min(1450px, calc(100% - 36px));
-      margin: auto;
+      margin: 0 auto;
       padding: 28px 0 45px;
     }
 
@@ -104,13 +135,14 @@
     }
 
     .heading h2 {
-      font-size: 30px;
+      font-size: clamp(25px, 3vw, 30px);
       font-weight: 850;
+      letter-spacing: -0.5px;
     }
 
     .heading p {
       margin-top: 5px;
-      color: var(--gray);
+      color: var(--text-muted);
       font-size: 14px;
     }
 
@@ -119,8 +151,8 @@
       overflow: hidden;
       background: var(--white);
       border: 1px solid var(--border);
-      border-radius: 15px;
-      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
     }
 
     .card-title {
@@ -132,6 +164,25 @@
       border-bottom: 1px solid var(--border);
       font-size: 14px;
       font-weight: 850;
+    }
+
+    .status-text {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.2px;
+    }
+
+    .status-loading {
+      color: var(--orange);
+    }
+
+    .status-live {
+      color: var(--green);
+    }
+
+    .status-error {
+      color: var(--red);
     }
 
     .chamiwarn-banner {
@@ -149,24 +200,24 @@
       display: block;
       margin-bottom: 5px;
       font-size: 15px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
 
     .chamiwarn-banner small {
       display: block;
       margin-top: 8px;
-      opacity: 0.9;
+      opacity: 0.92;
       font-size: 10px;
     }
 
     .chamiwatch {
-      background: #b98500;
-      border: 1px solid #e1bb37;
+      background: #9b7200;
+      border: 1px solid #d4a60c;
     }
 
     .chamiwarn {
-      background: #cb6300;
-      border: 1px solid #f09c43;
+      background: #bc5800;
+      border: 1px solid #eb8a24;
     }
 
     .chamialert {
@@ -177,11 +228,11 @@
     #map {
       width: 100%;
       height: 570px;
-      background: white;
+      background: #dbeafe;
     }
 
     .leaflet-container {
-      background: white !important;
+      background: #dbeafe !important;
       font-family: inherit;
     }
 
@@ -199,7 +250,7 @@
 
     .radar-button {
       min-width: 38px;
-      height: 38px;
+      min-height: 38px;
       padding: 0 12px;
       color: #222;
       background: white;
@@ -207,11 +258,19 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: 750;
+      transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
     }
 
-    .radar-button:hover:not(:disabled) {
+    .radar-button:hover:not(:disabled),
+    .radar-button:focus-visible:not(:disabled) {
       color: var(--red);
       border-color: var(--red);
+      outline: none;
+    }
+
+    .radar-button:focus-visible {
+      outline: 3px solid rgba(227, 24, 24, 0.25);
+      outline-offset: 2px;
     }
 
     .radar-button:disabled {
@@ -223,6 +282,13 @@
       color: white;
       background: var(--red);
       border-color: var(--red);
+    }
+
+    .radar-button.play:hover:not(:disabled),
+    .radar-button.play:focus-visible:not(:disabled) {
+      color: white;
+      background: var(--dark-red);
+      border-color: var(--dark-red);
     }
 
     .radar-time {
@@ -247,6 +313,7 @@
     .legend {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 7px;
       padding: 10px 16px;
       color: #777;
@@ -255,15 +322,22 @@
     }
 
     .legend-bar {
-      width: 170px;
+      width: min(170px, 40vw);
       height: 8px;
       border-radius: 20px;
-      background: linear-gradient(90deg, #4ade80, #facc15, #fb923c, #ef4444, #c026d3);
+      background: linear-gradient(
+        90deg,
+        #4ade80,
+        #facc15,
+        #fb923c,
+        #ef4444,
+        #c026d3
+      );
     }
 
     .two-column {
       display: grid;
-      grid-template-columns: 1.3fr 0.7fr;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
       gap: 20px;
     }
 
@@ -278,7 +352,7 @@
     }
 
     .temperature {
-      font-size: 62px;
+      font-size: clamp(50px, 7vw, 62px);
       font-weight: 900;
       line-height: 1;
       letter-spacing: -3px;
@@ -297,14 +371,15 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-top: 25px;
     }
 
     .stat {
+      min-width: 0;
       padding: 13px;
-      background: #fafafa;
+      background: var(--surface-alt);
       border: 1px solid #e8e8e8;
       border-radius: 10px;
     }
@@ -318,6 +393,7 @@
 
     .stat-value {
       margin-top: 6px;
+      overflow-wrap: anywhere;
       font-size: 14px;
       font-weight: 850;
     }
@@ -331,6 +407,10 @@
       padding: 14px 16px;
       border-bottom: 1px solid #eee;
       border-left: 4px solid var(--red);
+    }
+
+    .alert:last-child {
+      border-bottom: 0;
     }
 
     .alert-event {
@@ -358,6 +438,8 @@
     .forecast-wrapper {
       overflow-x: auto;
       overflow-y: hidden;
+      scrollbar-color: #bbb transparent;
+      scrollbar-width: thin;
     }
 
     .hourly {
@@ -421,7 +503,7 @@
     }
 
     .forecast-day {
-      min-height: 165px;
+      min-height: 170px;
       padding: 18px 10px;
       text-align: center;
       border-right: 1px solid #eee;
@@ -463,11 +545,11 @@
     }
 
     .badge-watch {
-      background: #b98500;
+      background: #9b7200;
     }
 
     .badge-warn {
-      background: #cb6300;
+      background: #bc5800;
     }
 
     .badge-alert {
@@ -491,7 +573,7 @@
       }
 
       .stats {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       #map {
@@ -501,8 +583,8 @@
 
     @media (max-width: 600px) {
       header {
-        height: 65px;
-        padding: 0 14px;
+        min-height: 65px;
+        padding: 9px 14px;
       }
 
       .live {
@@ -528,8 +610,12 @@
         text-align: left;
       }
 
-      .temperature {
-        font-size: 50px;
+      .card-title {
+        padding: 0 14px;
+      }
+
+      .current {
+        padding: 20px;
       }
     }
   </style>
@@ -538,7 +624,13 @@
 <body>
   <header>
     <div class="brand">
-      <img src="logo.png" class="logo" alt="StormSignal logo">
+      <img
+        src="logo.png"
+        class="logo"
+        alt="StormSignal logo"
+        width="48"
+        height="48"
+      >
 
       <div>
         <h1>STORMSIGNAL</h1>
@@ -546,57 +638,98 @@
       </div>
     </div>
 
-    <div class="live">
-      <span class="live-dot"></span>
+    <div class="live" aria-label="Live weather data enabled">
+      <span class="live-dot" aria-hidden="true"></span>
       LIVE WEATHER
     </div>
   </header>
 
   <main>
-    <div class="chamiwarn-banner" id="chamiWarnBanner"></div>
+    <div
+      class="chamiwarn-banner"
+      id="chamiWarnBanner"
+      role="status"
+      aria-live="polite"
+    ></div>
 
     <div class="heading">
       <h2>Chaminade Weather</h2>
-      <p>Live radar, hourly conditions, forecasts and severe weather.</p>
+      <p>Live radar, hourly conditions, forecasts, and severe weather information.</p>
     </div>
 
-    <section class="card">
+    <section class="card" aria-labelledby="radarHeading">
       <div class="card-title">
-        📡 LIVE RADAR
-        <span id="radarStatus" style="margin-left:auto; color:#e08a00; font-size:10px;">
+        <span id="radarHeading">📡 LIVE RADAR</span>
+
+        <span
+          class="status-text status-loading"
+          id="radarStatus"
+          role="status"
+          aria-live="polite"
+        >
           ● LOADING
         </span>
       </div>
 
-      <div id="map"></div>
+      <div
+        id="map"
+        role="application"
+        aria-label="Interactive weather radar map for the Chaminade area"
+      ></div>
 
-      <div class="radar-controls">
-        <button class="radar-button" id="previousRadar" type="button">‹</button>
-        <button class="radar-button play" id="playRadar" type="button">▶ Play</button>
-        <button class="radar-button" id="nextRadar" type="button">›</button>
-        <button class="radar-button" id="latestRadar" type="button">Latest</button>
+      <div class="radar-controls" aria-label="Radar animation controls">
+        <button
+          class="radar-button"
+          id="previousRadar"
+          type="button"
+          aria-label="Show previous radar frame"
+          disabled
+        >‹</button>
 
-        <div class="radar-time">
+        <button
+          class="radar-button play"
+          id="playRadar"
+          type="button"
+          aria-label="Play radar animation"
+          disabled
+        >▶ Play</button>
+
+        <button
+          class="radar-button"
+          id="nextRadar"
+          type="button"
+          aria-label="Show next radar frame"
+          disabled
+        >›</button>
+
+        <button
+          class="radar-button"
+          id="latestRadar"
+          type="button"
+          disabled
+        >Latest</button>
+
+        <div class="radar-time" aria-live="polite">
           <small>Radar time</small>
           <strong id="radarTime">Loading...</strong>
         </div>
       </div>
 
-      <div class="legend">
+      <div class="legend" aria-label="Radar reflectivity legend">
         <span>Light</span>
-        <div class="legend-bar"></div>
+        <div class="legend-bar" aria-hidden="true"></div>
         <span>Heavy</span>
         <span>Reflectivity</span>
       </div>
     </section>
 
     <div class="two-column">
-      <section class="card">
-        <div class="card-title">🌡️ CURRENT CONDITIONS</div>
+      <section class="card" aria-labelledby="conditionsHeading">
+        <div class="card-title" id="conditionsHeading">🌡️ CURRENT CONDITIONS</div>
 
         <div class="current">
           <div class="current-main">
-            <div class="temperature" id="temperature">--</div>
+            <div class="temperature" id="temperature" aria-label="Current temperature">--</div>
 
             <div>
               <div class="condition" id="condition">Loading...</div>
@@ -628,33 +761,33 @@
         </div>
       </section>
 
-      <section class="card">
-        <div class="card-title">⚠️ ACTIVE NWS ALERTS</div>
+      <section class="card" aria-labelledby="alertsHeading">
+        <div class="card-title" id="alertsHeading">⚠️ ACTIVE NWS ALERTS</div>
 
-        <div class="alerts" id="alerts">
+        <div class="alerts" id="alerts" aria-live="polite">
           <div class="empty">Loading active alerts...</div>
         </div>
       </section>
     </div>
 
-    <section class="card">
+    <section class="card" aria-labelledby="hourlyHeading">
       <div class="card-title">
-        🕐 24-HOUR FORECAST
-        <span style="margin-left:auto; color:#999; font-size:10px;">Scroll horizontally →</span>
+        <span id="hourlyHeading">🕐 24-HOUR FORECAST</span>
+        <span class="status-text" style="color:#999;">Scroll horizontally →</span>
       </div>
 
       <div class="hourly-wrapper">
-        <div class="hourly" id="hourly">
+        <div class="hourly" id="hourly" aria-live="polite">
           <div class="empty">Loading hourly forecast...</div>
         </div>
       </div>
     </section>
 
-    <section class="card">
-      <div class="card-title">🌦️ 7-DAY FORECAST</div>
+    <section class="card" aria-labelledby="forecastHeading">
+      <div class="card-title" id="forecastHeading">🌦️ 7-DAY FORECAST</div>
 
       <div class="forecast-wrapper">
-        <div class="forecast" id="forecast">
+        <div class="forecast" id="forecast" aria-live="polite">
           <div class="empty">Loading seven-day forecast...</div>
         </div>
       </div>
@@ -667,51 +800,85 @@
     • Radar imagery from RainViewer
   </footer>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+    import {
+      getFirestore,
+      doc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
+    /*
+      Replace these placeholders with your own Firebase Web App configuration.
+
+      Do not rely on hiding these values for security. Your Firestore rules must
+      explicitly restrict who can edit public_status/chamiwarn.
+    */
     const firebaseConfig = {
-      apiKey: "AIzaSyAJ4vOeQrUDY1f9O3-3zGF1oCgptP7ePQw",
-      authDomain: "stormsignal-premium.firebaseapp.com",
-      projectId: "stormsignal-premium",
-      storageBucket: "stormsignal-premium.firebasestorage.app",
-      messagingSenderId: "104140219197",
-      appId: "1:104140219197:web:6cb2a20673130ae48c5b54"
+      apiKey: "PASTE_YOUR_FIREBASE_API_KEY_HERE",
+      authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+      projectId: "PASTE_YOUR_PROJECT_ID",
+      storageBucket: "PASTE_YOUR_PROJECT.firebasestorage.app",
+      messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID",
+      appId: "PASTE_YOUR_APP_ID"
     };
 
-    const LAT = 38.6273;
-    const LON = -90.3390;
+    /*
+      Approximate Chaminade College Preparatory School location.
+      Adjust these values if your dashboard should center on another campus area.
+    */
+    const LAT = 38.6678;
+    const LON = -90.4072;
 
-    const firebaseApp = initializeApp(firebaseConfig);
-    const db = getFirestore(firebaseApp);
-    const chamiWarnRef = doc(db, "public_status", "chamiwarn");
-
-    let activeChamiWarn = null;
-    let forecastUrl = "";
-    let radarLayer = null;
-    let radarFrames = [];
-    let radarHost = "";
-    let radarIndex = 0;
-    let radarTimer = null;
-    let radarPlaying = false;
-    let alertLayers = [];
-
-    const $ = function (id) {
-      return document.getElementById(id);
+    const NWS_HEADERS = {
+      Accept: "application/geo+json",
+      "User-Agent": "StormSignal-Chaminade-Weather-Dashboard (school weather project)"
     };
+
+    const RADAR_REFRESH_MS = 10 * 60 * 1000;
+    const WEATHER_REFRESH_MS = 5 * 60 * 1000;
+    const RADAR_FRAME_DURATION_MS = 700;
+
+    const state = {
+      activeChamiWarn: null,
+      forecastUrl: "",
+      radarLayer: null,
+      radarFrames: [],
+      radarHost: "",
+      radarIndex: 0,
+      radarTimer: null,
+      radarPlaying: false,
+      radarLoading: false,
+      weatherLoading: false,
+      alertsLoading: false,
+      alertLayers: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const radarButtons = [
+      $("previousRadar"),
+      $("playRadar"),
+      $("nextRadar"),
+      $("latestRadar")
+    ];
 
     const map = L.map("map", {
       center: [LAT, LON],
-      zoom: 9,
+      zoom: 10,
       minZoom: 7,
-      maxZoom: 10
+      maxZoom: 11,
+      zoomControl: true
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 10,
+      maxZoom: 11,
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
@@ -725,7 +892,7 @@
 
     L.marker([LAT, LON])
       .addTo(map)
-      .bindPopup("<b>Chaminade</b><br>StormSignal home area");
+      .bindPopup("<strong>Chaminade</strong><br>StormSignal home area");
 
     function safeText(value, fallback = "--") {
       if (value === null || value === undefined) {
@@ -737,14 +904,16 @@
     }
 
     function escapeHtml(value) {
-      return safeText(value, "").replace(/[&<>"']/g, function (character) {
-        return {
+      return safeText(value, "").replace(/[&<>"']/g, (character) => {
+        const characters = {
           "&": "&amp;",
           "<": "&lt;",
           ">": "&gt;",
           '"': "&quot;",
           "'": "&#039;"
-        }[character];
+        };
+
+        return characters[character];
       });
     }
 
@@ -753,37 +922,70 @@
     }
 
     function fahrenheit(celsius) {
-      return isNumber(celsius)
-        ? Math.round((Number(celsius) * 9 / 5) + 32)
-        : null;
+      if (!isNumber(celsius)) {
+        return null;
+      }
+
+      return Math.round((Number(celsius) * 9 / 5) + 32);
     }
 
-    function weatherIcon(text) {
-      const value = String(text || "").toLowerCase();
+    function kilometersPerHourToMph(value) {
+      if (!isNumber(value)) {
+        return null;
+      }
 
-      if (value.includes("thunder")) return "⛈️";
-      if (value.includes("snow") || value.includes("sleet") || value.includes("ice")) return "❄️";
-      if (value.includes("rain") || value.includes("shower") || value.includes("drizzle")) return "🌧️";
-      if (value.includes("fog") || value.includes("haze")) return "🌫️";
-      if (value.includes("cloud") || value.includes("overcast")) return "☁️";
-      if (value.includes("clear") || value.includes("sunny")) return "☀️";
+      return Math.round(Number(value) * 0.621371);
+    }
+
+    function pascalsToHpa(value) {
+      if (!isNumber(value)) {
+        return null;
+      }
+
+      return Math.round(Number(value) / 100);
+    }
+
+    function weatherIcon(description) {
+      const text = String(description || "").toLowerCase();
+
+      if (text.includes("thunder")) return "⛈️";
+      if (text.includes("snow") || text.includes("sleet") || text.includes("ice")) return "❄️";
+      if (text.includes("rain") || text.includes("shower") || text.includes("drizzle")) return "🌧️";
+      if (text.includes("fog") || text.includes("haze") || text.includes("smoke")) return "🌫️";
+      if (text.includes("cloud") || text.includes("overcast")) return "☁️";
+      if (text.includes("clear") || text.includes("sunny")) return "☀️";
 
       return "🌤️";
     }
 
-    async function nwsFetch(url) {
+    async function fetchJson(url, headers = {}) {
       const response = await fetch(url, {
-        headers: {
-          "Accept": "application/geo+json"
-        },
+        headers,
         cache: "no-store"
       });
 
       if (!response.ok) {
-        throw new Error(`NWS HTTP ${response.status}`);
+        throw new Error(`Request failed: HTTP ${response.status}`);
       }
 
       return response.json();
+    }
+
+    async function nwsFetch(url) {
+      return fetchJson(url, NWS_HEADERS);
+    }
+
+    function setRadarStatus(message, type = "loading") {
+      const status = $("radarStatus");
+
+      status.textContent = message;
+      status.className = `status-text status-${type}`;
+    }
+
+    function setRadarControlsEnabled(enabled) {
+      radarButtons.forEach((button) => {
+        button.disabled = !enabled;
+      });
     }
 
     function chamiLevelLabel(level) {
@@ -806,190 +1008,229 @@
 
     function renderChamiWarn() {
       const banner = $("chamiWarnBanner");
+      const warning = state.activeChamiWarn;
 
-      if (!activeChamiWarn || activeChamiWarn.active !== true) {
+      if (!warning || warning.active !== true) {
         banner.style.display = "none";
         banner.className = "chamiwarn-banner";
         banner.innerHTML = "";
         return;
       }
 
-      banner.className = `chamiwarn-banner ${chamiClass(activeChamiWarn.level)}`;
+      const level = safeText(warning.level, "WARN").toUpperCase();
+      const headline = escapeHtml(warning.headline);
+      const details = warning.details
+        ? `<br>${escapeHtml(warning.details)}`
+        : "";
 
+      banner.className = `chamiwarn-banner ${chamiClass(level)}`;
       banner.innerHTML = `
-        <strong>${escapeHtml(chamiLevelLabel(activeChamiWarn.level))} — ${escapeHtml(activeChamiWarn.alertDate)}</strong>
-        ${escapeHtml(activeChamiWarn.headline)}
-        ${activeChamiWarn.details ? `<br>${escapeHtml(activeChamiWarn.details)}` : ""}
+        <strong>${escapeHtml(chamiLevelLabel(level))} — ${escapeHtml(warning.alertDate)}</strong>
+        ${headline}
+        ${details}
         <small>
-          StormSignal informational status only. Follow official NWS alerts
-          and Chaminade administration guidance for official actions.
+          StormSignal is informational only. Follow official NWS alerts and
+          Chaminade administration guidance for official actions.
         </small>
       `;
 
       banner.style.display = "block";
     }
 
-    onSnapshot(
-      chamiWarnRef,
-      function (snapshot) {
-        activeChamiWarn = snapshot.exists() ? snapshot.data() : null;
-        renderChamiWarn();
+    function initializeFirebaseStatus() {
+      const requiredKeys = [
+        "apiKey",
+        "authDomain",
+        "projectId",
+        "storageBucket",
+        "messagingSenderId",
+        "appId"
+      ];
 
-        /*
-          Critical fix:
-          The stored forecast URL is used here, so the matching ChamiWARN
-          badge re-renders immediately when Firebase changes.
-        */
-        if (forecastUrl) {
-          loadSevenDayForecast(forecastUrl);
-        }
-      },
-      function (error) {
-        console.error("StormSignal ChamiWARN Firebase error:", error);
-      }
-    );
+      const configured = requiredKeys.every((key) => {
+        const value = firebaseConfig[key];
+        return value && !String(value).startsWith("PASTE_");
+      });
 
-    function removeRadarLayer() {
-      if (radarLayer && map.hasLayer(radarLayer)) {
-        map.removeLayer(radarLayer);
-      }
-
-      radarLayer = null;
-    }
-
-    function showRadarFrame(index) {
-      if (!radarFrames.length || !radarFrames[index]) {
+      if (!configured) {
+        console.info("Firebase configuration has not been added. ChamiWARN status is disabled.");
         return;
       }
 
-      const frame = radarFrames[index];
-      const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+      try {
+        const firebaseApp = initializeApp(firebaseConfig);
+        const db = getFirestore(firebaseApp);
+        const chamiWarnRef = doc(db, "public_status", "chamiwarn");
+
+        onSnapshot(
+          chamiWarnRef,
+          (snapshot) => {
+            state.activeChamiWarn = snapshot.exists() ? snapshot.data() : null;
+            renderChamiWarn();
+
+            if (state.forecastUrl) {
+              loadSevenDayForecast(state.forecastUrl);
+            }
+          },
+          (error) => {
+            console.error("ChamiWARN Firebase error:", error);
+          }
+        );
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+      }
+    }
+
+    function removeRadarLayer() {
+      if (state.radarLayer && map.hasLayer(state.radarLayer)) {
+        map.removeLayer(state.radarLayer);
+      }
+
+      state.radarLayer = null;
+    }
+
+    function formatRadarTime(unixSeconds) {
+      const date = new Date(Number(unixSeconds) * 1000);
+
+      if (Number.isNaN(date.getTime())) {
+        return "Unavailable";
+      }
+
+      return date.toLocaleString([], {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function showRadarFrame(index) {
+      const frame = state.radarFrames[index];
+
+      if (!frame || !state.radarHost) {
+        return;
+      }
+
+      const tileUrl = `${state.radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
 
       removeRadarLayer();
 
-      radarLayer = L.tileLayer(tileUrl, {
+      state.radarLayer = L.tileLayer(tileUrl, {
         pane: "radarPane",
         opacity: 0.82,
-        maxZoom: 10,
+        maxZoom: 11,
         maxNativeZoom: 7,
         noWrap: true,
         attribution: "Radar © RainViewer"
       });
 
-      radarLayer.addTo(map);
+      state.radarLayer.addTo(map);
+      state.radarIndex = index;
 
-      radarIndex = index;
-
-      $("radarTime").textContent =
-        new Date(Number(frame.time) * 1000).toLocaleString([], {
-          weekday: "short",
-          hour: "numeric",
-          minute: "2-digit"
-        });
-
-      $("radarStatus").textContent = "● LIVE";
-      $("radarStatus").style.color = "#19a34a";
+      $("radarTime").textContent = formatRadarTime(frame.time);
+      setRadarStatus("● LIVE", "live");
     }
 
     async function loadRadar() {
-      $("radarStatus").textContent = "● LOADING";
-      $("radarStatus").style.color = "#e08a00";
+      if (state.radarLoading) {
+        return;
+      }
+
+      state.radarLoading = true;
+      setRadarStatus("● LOADING", "loading");
 
       try {
-        const response = await fetch(
-          "https://api.rainviewer.com/public/weather-maps.json",
-          {
-            cache: "no-store"
-          }
+        const data = await fetchJson(
+          "https://api.rainviewer.com/public/weather-maps.json"
         );
 
-        if (!response.ok) {
-          throw new Error(`RainViewer HTTP ${response.status}`);
+        const frames = Array.isArray(data.radar?.past)
+          ? data.radar.past.filter((frame) => {
+              return frame && frame.path && isNumber(frame.time);
+            })
+          : [];
+
+        if (!data.host || !frames.length) {
+          throw new Error("RainViewer returned no usable radar frames.");
         }
 
-        const data = await response.json();
+        state.radarHost = data.host.replace(/\/$/, "");
+        state.radarFrames = frames;
+        state.radarIndex = frames.length - 1;
 
-        if (!data.host || !Array.isArray(data.radar?.past)) {
-          throw new Error("RainViewer metadata did not include usable radar data.");
-        }
-
-        radarHost = data.host.replace(/\/$/, "");
-
-        radarFrames = data.radar.past.filter(function (frame) {
-          return frame && frame.path && isNumber(frame.time);
-        });
-
-        if (!radarFrames.length) {
-          throw new Error("No usable RainViewer radar frames.");
-        }
-
-        radarIndex = radarFrames.length - 1;
-        showRadarFrame(radarIndex);
+        showRadarFrame(state.radarIndex);
+        setRadarControlsEnabled(true);
       } catch (error) {
-        console.error("StormSignal radar error:", error);
+        console.error("Radar error:", error);
 
-        $("radarStatus").textContent = "● RADAR TEMPORARILY UNAVAILABLE";
-        $("radarStatus").style.color = "#e31818";
+        state.radarFrames = [];
+        setRadarControlsEnabled(false);
         $("radarTime").textContent = "Unavailable";
+        setRadarStatus("● RADAR UNAVAILABLE", "error");
+      } finally {
+        state.radarLoading = false;
       }
     }
 
     function pauseRadar() {
-      radarPlaying = false;
+      state.radarPlaying = false;
       $("playRadar").textContent = "▶ Play";
+      $("playRadar").setAttribute("aria-label", "Play radar animation");
 
-      if (radarTimer !== null) {
-        clearInterval(radarTimer);
-        radarTimer = null;
+      if (state.radarTimer !== null) {
+        clearInterval(state.radarTimer);
+        state.radarTimer = null;
       }
     }
 
     function playRadar() {
-      if (!radarFrames.length) {
+      if (!state.radarFrames.length || document.hidden) {
         return;
       }
 
       pauseRadar();
 
-      radarPlaying = true;
+      state.radarPlaying = true;
       $("playRadar").textContent = "❚❚ Pause";
+      $("playRadar").setAttribute("aria-label", "Pause radar animation");
 
-      radarTimer = setInterval(function () {
-        radarIndex = (radarIndex + 1) % radarFrames.length;
-        showRadarFrame(radarIndex);
-      }, 700);
+      state.radarTimer = window.setInterval(() => {
+        state.radarIndex = (state.radarIndex + 1) % state.radarFrames.length;
+        showRadarFrame(state.radarIndex);
+      }, RADAR_FRAME_DURATION_MS);
     }
 
-    $("playRadar").addEventListener("click", function () {
-      if (radarPlaying) {
+    $("playRadar").addEventListener("click", () => {
+      if (state.radarPlaying) {
         pauseRadar();
       } else {
         playRadar();
       }
     });
 
-    $("previousRadar").addEventListener("click", function () {
-      if (!radarFrames.length) return;
+    $("previousRadar").addEventListener("click", () => {
+      if (!state.radarFrames.length) return;
 
       pauseRadar();
-      radarIndex = (radarIndex - 1 + radarFrames.length) % radarFrames.length;
-      showRadarFrame(radarIndex);
+      state.radarIndex =
+        (state.radarIndex - 1 + state.radarFrames.length) %
+        state.radarFrames.length;
+
+      showRadarFrame(state.radarIndex);
     });
 
-    $("nextRadar").addEventListener("click", function () {
-      if (!radarFrames.length) return;
+    $("nextRadar").addEventListener("click", () => {
+      if (!state.radarFrames.length) return;
 
       pauseRadar();
-      radarIndex = (radarIndex + 1) % radarFrames.length;
-      showRadarFrame(radarIndex);
+      state.radarIndex = (state.radarIndex + 1) % state.radarFrames.length;
+      showRadarFrame(state.radarIndex);
     });
 
-    $("latestRadar").addEventListener("click", function () {
-      if (!radarFrames.length) return;
+    $("latestRadar").addEventListener("click", () => {
+      if (!state.radarFrames.length) return;
 
       pauseRadar();
-      radarIndex = radarFrames.length - 1;
-      showRadarFrame(radarIndex);
+      showRadarFrame(state.radarFrames.length - 1);
     });
 
     function renderCurrentUnavailable() {
@@ -1005,12 +1246,14 @@
       try {
         const stationData = await nwsFetch(stationsUrl);
         const stations = Array.isArray(stationData.features)
-          ? stationData.features.slice(0, 8)
+          ? stationData.features.slice(0, 10)
           : [];
 
         let observation = null;
 
         for (const station of stations) {
+          if (!station?.id) continue;
+
           try {
             const data = await nwsFetch(`${station.id}/observations/latest`);
 
@@ -1019,208 +1262,255 @@
               break;
             }
           } catch (error) {
-            console.warn("NWS observation station error:", error);
+            console.warn("Nearby observation unavailable:", error);
           }
         }
 
         if (!observation) {
-          throw new Error("No usable nearby NWS observation.");
+          throw new Error("No usable nearby NWS observation was available.");
         }
 
-        const temp = fahrenheit(observation.temperature?.value);
-        const heat = fahrenheit(observation.heatIndex?.value);
-        const chill = fahrenheit(observation.windChill?.value);
-        const feels = heat ?? chill ?? temp;
+        const temperature = fahrenheit(observation.temperature?.value);
+        const heatIndex = fahrenheit(observation.heatIndex?.value);
+        const windChill = fahrenheit(observation.windChill?.value);
+        const feelsLike = heatIndex ?? windChill ?? temperature;
+        const windMph = kilometersPerHourToMph(observation.windSpeed?.value);
+        const humidity = observation.relativeHumidity?.value;
+        const pressure = pascalsToHpa(observation.barometricPressure?.value);
 
-        $("temperature").textContent = temp === null ? "--" : `${temp}°`;
-        $("condition").textContent = safeText(observation.textDescription, "Conditions unavailable");
-        $("feels").textContent = feels === null ? "--" : `${feels}°`;
-
-        $("wind").textContent = isNumber(observation.windSpeed?.value)
-          ? `${Math.round(Number(observation.windSpeed.value) * 0.621371)} mph`
+        $("temperature").textContent = temperature === null ? "--" : `${temperature}°`;
+        $("condition").textContent = safeText(
+          observation.textDescription,
+          "Conditions unavailable"
+        );
+        $("feels").textContent = feelsLike === null ? "--" : `${feelsLike}°`;
+        $("wind").textContent = windMph === null ? "--" : `${windMph} mph`;
+        $("humidity").textContent = isNumber(humidity)
+          ? `${Math.round(Number(humidity))}%`
           : "--";
-
-        $("humidity").textContent = isNumber(observation.relativeHumidity?.value)
-          ? `${Math.round(Number(observation.relativeHumidity.value))}%`
-          : "--";
-
-        $("pressure").textContent = isNumber(observation.barometricPressure?.value)
-          ? `${Math.round(Number(observation.barometricPressure.value) / 100)} hPa`
-          : "--";
+        $("pressure").textContent = pressure === null ? "--" : `${pressure} hPa`;
       } catch (error) {
-        console.error("Current conditions error:", error);
+        console.error("Current-conditions error:", error);
         renderCurrentUnavailable();
       }
+    }
+
+    function createHourlyPeriod(period, index) {
+      const element = document.createElement("article");
+      const time = index === 0
+        ? "NOW"
+        : new Date(period.startTime).toLocaleTimeString([], {
+            hour: "numeric"
+          });
+
+      const temperature = isNumber(period.temperature)
+        ? `${Math.round(Number(period.temperature))}°`
+        : "--";
+
+      const precipitation = isNumber(period.probabilityOfPrecipitation?.value)
+        ? `${Math.round(Number(period.probabilityOfPrecipitation.value))}%`
+        : "--";
+
+      element.className = "hour";
+      element.innerHTML = `
+        <div class="hour-time">${escapeHtml(time)}</div>
+        <div class="hour-temp">${temperature}</div>
+        <div class="hour-icon" aria-hidden="true">${weatherIcon(period.shortForecast)}</div>
+        <div class="hour-condition">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
+        <div class="hour-rain">💧 ${precipitation}</div>
+        <div class="hour-wind">💨 ${escapeHtml(safeText(period.windSpeed, "--"))}</div>
+      `;
+
+      return element;
     }
 
     async function loadHourlyForecast(url) {
       try {
         const data = await nwsFetch(url);
-
         const periods = Array.isArray(data.properties?.periods)
           ? data.properties.periods.slice(0, 24)
           : [];
 
         if (!periods.length) {
-          throw new Error("No hourly forecast periods.");
+          throw new Error("No hourly forecast periods were returned.");
         }
 
-        $("hourly").innerHTML = "";
+        const fragment = document.createDocumentFragment();
 
-        periods.forEach(function (period, index) {
-          const hour = document.createElement("div");
-
-          const time = index === 0
-            ? "NOW"
-            : new Date(period.startTime).toLocaleTimeString([], {
-              hour: "numeric"
-            });
-
-          hour.className = "hour";
-
-          hour.innerHTML = `
-            <div class="hour-time">${escapeHtml(time)}</div>
-            <div class="hour-temp">${isNumber(period.temperature) ? `${Math.round(Number(period.temperature))}°` : "--"}</div>
-            <div class="hour-icon">${weatherIcon(period.shortForecast)}</div>
-            <div class="hour-condition">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
-            <div class="hour-rain">💧 ${isNumber(period.probabilityOfPrecipitation?.value) ? `${Math.round(Number(period.probabilityOfPrecipitation.value))}%` : "--"}</div>
-            <div class="hour-wind">💨 ${escapeHtml(safeText(period.windSpeed, "--"))}</div>
-          `;
-
-          $("hourly").appendChild(hour);
+        periods.forEach((period, index) => {
+          fragment.appendChild(createHourlyPeriod(period, index));
         });
+
+        $("hourly").replaceChildren(fragment);
       } catch (error) {
         console.error("Hourly forecast error:", error);
-
         $("hourly").innerHTML = `
           <div class="empty">Hourly forecast temporarily unavailable.</div>
         `;
       }
     }
 
+    function createForecastDay(period) {
+      const element = document.createElement("article");
+      const dateKey = period.startTime ? period.startTime.slice(0, 10) : "";
+      const warning = state.activeChamiWarn;
+
+      const hasChamiWarn =
+        warning &&
+        warning.active === true &&
+        warning.alertDate === dateKey;
+
+      const level = safeText(warning?.level, "WARN").toUpperCase();
+      const badgeText =
+        level === "WATCH"
+          ? "CHAMIWATCH"
+          : level === "ALERT"
+            ? "CHAMIALERT"
+            : "CHAMIWARN";
+
+      const temperature = isNumber(period.temperature)
+        ? `${Math.round(Number(period.temperature))}°`
+        : "--";
+
+      element.className = "forecast-day";
+      element.innerHTML = `
+        <div class="forecast-name">${escapeHtml(safeText(period.name, "Forecast"))}</div>
+        <div class="forecast-icon" aria-hidden="true">${weatherIcon(period.shortForecast)}</div>
+        <div class="forecast-temp">${temperature}</div>
+        <div class="forecast-description">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
+        ${
+          hasChamiWarn
+            ? `<span class="chami-badge ${badgeClass(level)}">${badgeText}</span>`
+            : ""
+        }
+      `;
+
+      return element;
+    }
+
     async function loadSevenDayForecast(url) {
       try {
         const data = await nwsFetch(url);
-
-        let periods = Array.isArray(data.properties?.periods)
-          ? data.properties.periods.filter(function (period) {
-            return period.isDaytime === true;
-          }).slice(0, 7)
+        const allPeriods = Array.isArray(data.properties?.periods)
+          ? data.properties.periods
           : [];
 
+        let periods = allPeriods
+          .filter((period) => period.isDaytime === true)
+          .slice(0, 7);
+
         if (!periods.length) {
-          periods = data.properties?.periods?.slice(0, 7) || [];
+          periods = allPeriods.slice(0, 7);
         }
 
         if (!periods.length) {
-          throw new Error("No daily forecast periods.");
+          throw new Error("No daily forecast periods were returned.");
         }
 
-        $("forecast").innerHTML = "";
+        const fragment = document.createDocumentFragment();
 
-        periods.forEach(function (period) {
-          const dateKey = period.startTime ? period.startTime.slice(0, 10) : "";
-
-          const hasChamiWarn = (
-            activeChamiWarn &&
-            activeChamiWarn.active === true &&
-            activeChamiWarn.alertDate === dateKey
-          );
-
-          const badge = activeChamiWarn?.level === "WATCH"
-            ? "CHAMIWATCH"
-            : activeChamiWarn?.level === "ALERT"
-              ? "CHAMIALERT"
-              : "CHAMIWARN";
-
-          const element = document.createElement("div");
-          element.className = "forecast-day";
-
-          element.innerHTML = `
-            <div class="forecast-name">${escapeHtml(safeText(period.name, "Forecast"))}</div>
-            <div class="forecast-icon">${weatherIcon(period.shortForecast)}</div>
-            <div class="forecast-temp">${isNumber(period.temperature) ? `${Math.round(Number(period.temperature))}°` : "--"}</div>
-            <div class="forecast-description">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
-            ${hasChamiWarn ? `<span class="chami-badge ${badgeClass(activeChamiWarn.level)}">${badge}</span>` : ""}
-          `;
-
-          $("forecast").appendChild(element);
+        periods.forEach((period) => {
+          fragment.appendChild(createForecastDay(period));
         });
+
+        $("forecast").replaceChildren(fragment);
       } catch (error) {
         console.error("Seven-day forecast error:", error);
-
         $("forecast").innerHTML = `
           <div class="empty">Seven-day forecast temporarily unavailable.</div>
         `;
       }
     }
 
+    function clearAlertLayers() {
+      state.alertLayers.forEach((layer) => {
+        if (map.hasLayer(layer)) {
+          map.removeLayer(layer);
+        }
+      });
+
+      state.alertLayers = [];
+    }
+
+    function addAlertPolygon(feature) {
+      if (!feature?.geometry) {
+        return;
+      }
+
+      try {
+        const layer = L.geoJSON(feature, {
+          pane: "alertPane",
+          interactive: false,
+          style: {
+            color: "#e31818",
+            weight: 3,
+            fillColor: "#e31818",
+            fillOpacity: 0.12
+          }
+        }).addTo(map);
+
+        state.alertLayers.push(layer);
+      } catch (error) {
+        console.warn("Could not render NWS alert polygon:", error);
+      }
+    }
+
     async function loadAlerts() {
+      if (state.alertsLoading) {
+        return;
+      }
+
+      state.alertsLoading = true;
+
       try {
         const data = await nwsFetch(
           `https://api.weather.gov/alerts/active?point=${LAT},${LON}`
         );
 
-        alertLayers.forEach(function (layer) {
-          if (map.hasLayer(layer)) {
-            map.removeLayer(layer);
-          }
-        });
-
-        alertLayers = [];
-
         const alerts = Array.isArray(data.features) ? data.features : [];
+        clearAlertLayers();
 
         if (!alerts.length) {
           $("alerts").innerHTML = `
             <div class="empty">✅ No active NWS alerts for the Chaminade area.</div>
           `;
-
           return;
         }
 
-        $("alerts").innerHTML = "";
+        const fragment = document.createDocumentFragment();
 
-        alerts.forEach(function (feature) {
-          const props = feature.properties || {};
-          const element = document.createElement("div");
+        alerts.forEach((feature) => {
+          const properties = feature.properties || {};
+          const element = document.createElement("article");
 
           element.className = "alert";
           element.innerHTML = `
-            <div class="alert-event">⚠️ ${escapeHtml(safeText(props.event, "Weather Alert"))}</div>
-            <div class="alert-headline">${escapeHtml(safeText(props.headline, "Active weather alert."))}</div>
+            <div class="alert-event">⚠️ ${escapeHtml(safeText(properties.event, "Weather Alert"))}</div>
+            <div class="alert-headline">${escapeHtml(safeText(properties.headline, "Active weather alert."))}</div>
           `;
 
-          $("alerts").appendChild(element);
-
-          if (feature.geometry) {
-            try {
-              const polygon = L.geoJSON(feature, {
-                pane: "alertPane",
-                style: {
-                  color: "#e31818",
-                  weight: 3,
-                  fillColor: "#e31818",
-                  fillOpacity: 0.12
-                }
-              }).addTo(map);
-
-              alertLayers.push(polygon);
-            } catch (error) {
-              console.warn("Alert polygon error:", error);
-            }
-          }
+          fragment.appendChild(element);
+          addAlertPolygon(feature);
         });
+
+        $("alerts").replaceChildren(fragment);
       } catch (error) {
         console.error("NWS alerts error:", error);
-
         $("alerts").innerHTML = `
-          <div class="empty">Unable to load active NWS alerts.</div>
+          <div class="empty">Unable to load active NWS alerts right now.</div>
         `;
+      } finally {
+        state.alertsLoading = false;
       }
     }
 
     async function loadWeather() {
+      if (state.weatherLoading) {
+        return;
+      }
+
+      state.weatherLoading = true;
+
       try {
         const point = await nwsFetch(
           `https://api.weather.gov/points/${LAT},${LON}`
@@ -1228,39 +1518,60 @@
 
         const properties = point.properties || {};
 
-        forecastUrl = properties.forecast || "";
+        state.forecastUrl = properties.forecast || "";
+
+        const requests = [];
 
         if (properties.observationStations) {
-          loadCurrentConditions(properties.observationStations);
+          requests.push(loadCurrentConditions(properties.observationStations));
         } else {
           renderCurrentUnavailable();
         }
 
         if (properties.forecastHourly) {
-          loadHourlyForecast(properties.forecastHourly);
+          requests.push(loadHourlyForecast(properties.forecastHourly));
         }
 
-        if (forecastUrl) {
-          loadSevenDayForecast(forecastUrl);
+        if (state.forecastUrl) {
+          requests.push(loadSevenDayForecast(state.forecastUrl));
         }
+
+        await Promise.allSettled(requests);
       } catch (error) {
-        console.error("Weather lookup error:", error);
+        console.error("NWS point lookup error:", error);
         renderCurrentUnavailable();
+
+        $("hourly").innerHTML = `
+          <div class="empty">Hourly forecast temporarily unavailable.</div>
+        `;
+
+        $("forecast").innerHTML = `
+          <div class="empty">Seven-day forecast temporarily unavailable.</div>
+        `;
+      } finally {
+        state.weatherLoading = false;
       }
     }
 
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && state.radarPlaying) {
+        pauseRadar();
+      }
+    });
+
+    window.addEventListener("beforeunload", pauseRadar);
+
+    initializeFirebaseStatus();
     loadRadar();
     loadWeather();
     loadAlerts();
 
-    setInterval(loadRadar, 10 * 60 * 1000);
+    window.setInterval(loadRadar, RADAR_REFRESH_MS);
 
-    setInterval(function () {
+    window.setInterval(() => {
       loadWeather();
       loadAlerts();
-    }, 5 * 60 * 1000);
-
-    window.addEventListener("beforeunload", pauseRadar);
+    }, WEATHER_REFRESH_MS);
   </script>
 </body>
 </html>
