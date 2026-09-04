@@ -9,10 +9,10 @@
 
   <meta
     name="description"
-    content="StormSignal Premium administrator weather desk for managing ChamiWARN statuses."
+    content="StormSignal Premium professional weather desk with radar, severe-weather ingredients, forecasts, and ChamiWARN controls."
   >
 
-  <title>StormSignal Premium | Admin Weather Desk</title>
+  <title>StormSignal Premium | Professional Weather Desk</title>
 
   <link rel="icon" href="logo.png" type="image/png">
 
@@ -39,6 +39,7 @@
       --yellow: #d6a600;
       --blue: #38bdf8;
       --purple: #a78bfa;
+      --cyan: #22d3ee;
       --error: #ff9292;
       --radius: 11px;
     }
@@ -83,9 +84,14 @@
     button:focus-visible,
     input:focus-visible,
     select:focus-visible,
-    textarea:focus-visible {
-      outline: 3px solid rgba(239, 38, 38, 0.34);
+    textarea:focus-visible,
+    a:focus-visible {
+      outline: 3px solid rgba(239, 38, 38, 0.35);
       outline-offset: 2px;
+    }
+
+    a {
+      color: inherit;
     }
 
     header {
@@ -183,13 +189,8 @@
       line-height: 1.45;
     }
 
-    .login input + label,
-    .login input + input {
-      margin-top: 10px;
-    }
-
     .shell {
-      width: min(1800px, calc(100% - 28px));
+      width: min(1850px, calc(100% - 28px));
       margin: 16px auto 35px;
     }
 
@@ -469,7 +470,8 @@
       line-height: 1.35;
     }
 
-    .lower {
+    .lower,
+    .analysis-row {
       display: grid;
       grid-template-columns: 1.25fr 1fr;
       gap: 14px;
@@ -563,7 +565,240 @@
       font-size: 11px;
     }
 
-    /* Premium graph dashboard */
+    /* Storm ingredients */
+
+    .ingredients-panel {
+      margin-top: 14px;
+    }
+
+    .ingredients-header-note {
+      float: right;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 750;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .ingredient-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .ingredient {
+      min-height: 112px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .ingredient-label {
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.65px;
+      text-transform: uppercase;
+    }
+
+    .ingredient-value {
+      margin-top: 10px;
+      color: white;
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .ingredient-unit {
+      margin-left: 3px;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .ingredient-detail {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.35;
+    }
+
+    .ingredient-link {
+      margin-top: auto;
+      padding-top: 9px;
+      color: var(--blue);
+      font-size: 9px;
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .ingredient-link:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    .ingredient-status {
+      display: inline-flex;
+      width: fit-content;
+      margin-top: 7px;
+      padding: 3px 5px;
+      border: 1px solid #3b4a5c;
+      border-radius: 4px;
+      color: #cdd9e7;
+      background: #182230;
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: 0.3px;
+    }
+
+    .ingredient-status.official {
+      color: #a7f3d0;
+      border-color: #237a4a;
+      background: #103e27;
+    }
+
+    .ingredient-status.caution {
+      color: #fcd34d;
+      border-color: #806117;
+      background: #3c2d0d;
+    }
+
+    .hazard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .hazard-card {
+      min-height: 103px;
+      padding: 12px;
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-top: 3px solid #49566a;
+      border-radius: 8px;
+    }
+
+    .hazard-card.tornado {
+      border-top-color: #bf5af2;
+    }
+
+    .hazard-card.wind {
+      border-top-color: #38bdf8;
+    }
+
+    .hazard-card.hail {
+      border-top-color: #60a5fa;
+    }
+
+    .hazard-card.flood {
+      border-top-color: #22d3ee;
+    }
+
+    .hazard-card.lightning {
+      border-top-color: #facc15;
+    }
+
+    .hazard-card.winter {
+      border-top-color: #c4b5fd;
+    }
+
+    .hazard-name {
+      color: white;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    .hazard-state {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .hazard-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.35;
+    }
+
+    /* Maps and external analysis */
+
+    .analysis-tools {
+      padding: 14px;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .tool-link {
+      min-height: 94px;
+      padding: 12px;
+      display: block;
+      color: inherit;
+      background: var(--panel-dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .tool-link:hover {
+      background: #162130;
+      border-color: var(--blue);
+    }
+
+    .tool-name {
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .tool-description {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    .tool-open {
+      display: block;
+      margin-top: 9px;
+      color: var(--blue);
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    .surface-map-wrap {
+      padding: 14px;
+    }
+
+    .surface-map-frame {
+      width: 100%;
+      min-height: 420px;
+      background: #d9e3ea;
+      border: 0;
+      border-radius: 8px;
+    }
+
+    .surface-map-note {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    /* Graphs */
 
     .graphs-panel {
       margin-top: 14px;
@@ -619,7 +854,7 @@
       background: var(--green);
     }
 
-    .graph-dot.confidence {
+    .graph-dot.impact {
       background: var(--yellow);
     }
 
@@ -698,7 +933,7 @@
       background: linear-gradient(to top, #15803d, #4ade80);
     }
 
-    .graph-bar.confidence {
+    .graph-bar.impact {
       background: linear-gradient(to top, #9a7800, #facc15);
     }
 
@@ -709,6 +944,10 @@
 
       .right-column {
         grid-column: 1 / -1;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .ingredient-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
@@ -725,12 +964,22 @@
       .workspace,
       .right-column,
       .lower,
-      .graphs-grid {
+      .analysis-row,
+      .graphs-grid,
+      .tool-grid {
         grid-template-columns: 1fr;
       }
 
       .right-column {
         grid-column: auto;
+      }
+
+      .ingredient-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hazard-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       #map {
@@ -756,6 +1005,19 @@
         margin-left: 0;
         text-align: left;
       }
+
+      .ingredient-grid,
+      .hazard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .ingredients-header-note {
+        display: none;
+      }
+
+      .surface-map-frame {
+        min-height: 300px;
+      }
     }
   </style>
 </head>
@@ -777,12 +1039,12 @@
     </div>
   </header>
 
-  <section class="login" id="loginScreen" aria-labelledby="loginHeading">
-    <h2 id="loginHeading">Premium Admin Sign In</h2>
+  <section class="login" id="loginScreen">
+    <h2>Premium Admin Sign In</h2>
 
     <p>
       Only approved StormSignal administrators can publish ChamiWARN
-      statuses to the public dashboard.
+      statuses and use the Premium weather desk.
     </p>
 
     <label class="label" for="email">Administrator Email</label>
@@ -850,7 +1112,6 @@
             min="20"
             max="100"
             value="82"
-            aria-label="Radar opacity"
           >
 
           <div class="two-buttons" style="margin-top:12px;">
@@ -885,11 +1146,7 @@
           <span id="zoom" style="float:right; color:#99a8ba;">Zoom: --</span>
         </div>
 
-        <div
-          id="map"
-          role="application"
-          aria-label="Interactive StormSignal Premium radar workspace"
-        ></div>
+        <div id="map" role="application"></div>
 
         <div class="radar-controls">
           <div class="radar-row">
@@ -922,25 +1179,10 @@
             </div>
 
             <div class="stats">
-              <div class="stat">
-                <small>Feels like</small>
-                <strong id="feels">--</strong>
-              </div>
-
-              <div class="stat">
-                <small>Wind</small>
-                <strong id="wind">--</strong>
-              </div>
-
-              <div class="stat">
-                <small>Humidity</small>
-                <strong id="humidity">--</strong>
-              </div>
-
-              <div class="stat">
-                <small>Pressure</small>
-                <strong id="pressure">--</strong>
-              </div>
+              <div class="stat"><small>Feels like</small><strong id="feels">--</strong></div>
+              <div class="stat"><small>Wind</small><strong id="wind">--</strong></div>
+              <div class="stat"><small>Humidity</small><strong id="humidity">--</strong></div>
+              <div class="stat"><small>Pressure</small><strong id="pressure">--</strong></div>
             </div>
           </div>
         </section>
@@ -966,7 +1208,7 @@
             </select>
 
             <label class="label" for="warnDate">Affected Date</label>
-            <input id="warnDate" type="date" required>
+            <input id="warnDate" type="date">
 
             <label class="label" for="warnExpiry">Optional Expiration</label>
             <input id="warnExpiry" type="datetime-local">
@@ -977,7 +1219,6 @@
               type="text"
               maxlength="140"
               placeholder="Severe storms possible after school"
-              required
             >
 
             <label class="label" for="warnDetails">Details / Recommended Action</label>
@@ -1003,6 +1244,309 @@
           </div>
         </section>
       </aside>
+    </div>
+
+    <section class="panel ingredients-panel">
+      <div class="panel-title">
+        STORM INGREDIENTS DESK
+        <span class="ingredients-header-note">
+          Official values require SPC/model/sounding analysis
+        </span>
+      </div>
+
+      <div class="ingredient-grid">
+        <article class="ingredient">
+          <div class="ingredient-label">MLCAPE</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">J/kg</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Mixed-layer buoyancy available for updrafts.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=mlcape">
+            View MLCAPE ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">MUCAPE</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">J/kg</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Most-unstable parcel buoyancy, useful for elevated convection.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=mucape">
+            View MUCAPE ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">MLCIN</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">J/kg</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Inhibition/cap strength that can delay storm initiation.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=mlcin">
+            View MLCIN ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">0–3 KM CAPE</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">J/kg</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Low-level buoyancy ingredient sometimes relevant in tornado environments.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=3cape">
+            View 0–3 km CAPE ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">0–6 KM SHEAR</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">kt</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Deep-layer shear supporting organized storms and supercells.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=shr6">
+            View Deep-Layer Shear ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">EFFECTIVE SHEAR</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">kt</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Bulk shear through the effective inflow layer.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=ebwd">
+            View Effective Shear ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">0–1 KM SRH</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">m²/s²</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Low-level storm-relative helicity / rotation environment.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=srh1">
+            View 0–1 km SRH ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">0–3 KM SRH</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">m²/s²</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Broader low-level shear and rotation environment.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=srh3">
+            View 0–3 km SRH ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">LCL HEIGHT</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">m AGL</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Lifted condensation level; cloud-base context.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=lclh">
+            View LCL Height ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">SUPERCELL COMP.</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">index</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Composite environmental indicator for supercell potential.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=scp">
+            View SCP ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">SIGNIFICANT TORNADO</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">index</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Composite index; never a tornado forecast by itself.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=stp">
+            View STP ↗
+          </a>
+        </article>
+
+        <article class="ingredient">
+          <div class="ingredient-label">DCAPE</div>
+          <div class="ingredient-value">— <span class="ingredient-unit">J/kg</span></div>
+          <span class="ingredient-status caution">OPEN SPC ANALYSIS</span>
+          <div class="ingredient-detail">Downdraft potential / damaging-wind context.</div>
+          <a class="ingredient-link" target="_blank" rel="noopener"
+             href="https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=20&parm=dcape">
+            View DCAPE ↗
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:14px;">
+      <div class="panel-title">LOCAL HAZARD ASSESSMENT</div>
+
+      <div class="hazard-grid">
+        <article class="hazard-card tornado">
+          <div class="hazard-name">TORNADO</div>
+          <div class="hazard-state">Check SPC / NWS</div>
+          <div class="hazard-note">Use outlooks, warnings, radar velocity, and storm-scale observations.</div>
+        </article>
+
+        <article class="hazard-card wind">
+          <div class="hazard-name">DAMAGING WIND</div>
+          <div class="hazard-state">Check SPC / NWS</div>
+          <div class="hazard-note">Consider bowing segments, downburst potential, and warning polygons.</div>
+        </article>
+
+        <article class="hazard-card hail">
+          <div class="hazard-name">LARGE HAIL</div>
+          <div class="hazard-state">Check SPC / NWS</div>
+          <div class="hazard-note">Evaluate instability, lapse rates, freezing level, and updraft strength.</div>
+        </article>
+
+        <article class="hazard-card flood">
+          <div class="hazard-name">FLASH FLOOD</div>
+          <div class="hazard-state">Check WPC / NWS</div>
+          <div class="hazard-note">Review rainfall rates, training potential, and active flood alerts.</div>
+        </article>
+
+        <article class="hazard-card lightning">
+          <div class="hazard-name">LIGHTNING</div>
+          <div class="hazard-state">Monitor Radar</div>
+          <div class="hazard-note">Any thunder means lightning risk; move students and activities indoors.</div>
+        </article>
+
+        <article class="hazard-card winter">
+          <div class="hazard-name">WINTER WEATHER</div>
+          <div class="hazard-state">Check NWS / WPC</div>
+          <div class="hazard-note">Track temperatures, precipitation type, ice potential, and travel impacts.</div>
+        </article>
+      </div>
+    </section>
+
+    <div class="analysis-row">
+      <section class="panel">
+        <div class="panel-title">
+          WPC SURFACE ANALYSIS • PRESSURE & FRONTS
+          <a
+            style="float:right; color:#38bdf8; text-decoration:none;"
+            target="_blank"
+            rel="noopener"
+            href="https://www.wpc.ncep.noaa.gov/html/sfc2.shtml"
+          >
+            Open Official Map ↗
+          </a>
+        </div>
+
+        <div class="surface-map-wrap">
+          <iframe
+            class="surface-map-frame"
+            title="WPC surface analysis with fronts and pressure systems"
+            src="https://www.wpc.ncep.noaa.gov/html/sfc2.shtml"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+          ></iframe>
+
+          <p class="surface-map-note">
+            Official WPC surface analysis may show highs, lows, fronts, troughs,
+            drylines, pressure patterns, and related analyzed boundaries. If the
+            embedded view is blocked by the source, use “Open Official Map.”
+          </p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">PROFESSIONAL ANALYSIS TOOLS</div>
+
+        <div class="analysis-tools">
+          <div class="tool-grid">
+            <a
+              class="tool-link"
+              target="_blank"
+              rel="noopener"
+              href="https://www.spc.noaa.gov/exper/mesoanalysis/"
+            >
+              <span class="tool-name">SPC Mesoanalysis</span>
+              <span class="tool-description">
+                CAPE, CIN, shear, helicity, LCL, composite parameters, lapse rates, moisture convergence, and more.
+              </span>
+              <span class="tool-open">Open analysis ↗</span>
+            </a>
+
+            <a
+              class="tool-link"
+              target="_blank"
+              rel="noopener"
+              href="https://www.spc.noaa.gov/products/outlook/"
+            >
+              <span class="tool-name">SPC Convective Outlooks</span>
+              <span class="tool-description">
+                Day 1–8 categorical outlooks plus tornado, wind, and hail probability products.
+              </span>
+              <span class="tool-open">Open outlooks ↗</span>
+            </a>
+
+            <a
+              class="tool-link"
+              target="_blank"
+              rel="noopener"
+              href="https://www.spc.noaa.gov/products/md/"
+            >
+              <span class="tool-name">SPC Mesoscale Discussions</span>
+              <span class="tool-description">
+                Forecaster discussions of evolving severe, heavy-rain, winter, and convective environments.
+              </span>
+              <span class="tool-open">Open discussions ↗</span>
+            </a>
+
+            <a
+              class="tool-link"
+              target="_blank"
+              rel="noopener"
+              href="https://www.wpc.ncep.noaa.gov/#page=ero"
+            >
+              <span class="tool-name">WPC Rainfall Outlook</span>
+              <span class="tool-description">
+                Excessive-rainfall outlooks and flash-flood guidance context.
+              </span>
+              <span class="tool-open">Open WPC outlook ↗</span>
+            </a>
+
+            <a
+              class="tool-link"
+              target="_blank"
+              rel="noopener"
+              href="https://www.weather.gov/lsx/"
+            >
+              <span class="tool-name">NWS St. Louis</span>
+              <span class="tool-description">
+                Local watches, warnings, forecasts, hazardous weather outlooks, and briefing products.
+              </span>
+              <span class="tool-open">Open NWS LSX ↗</span>
+            </a>
+
+            <a
+              class="tool-link"
+              target="_blank"
+              rel="noopener"
+              href="https://mesonet.agron.iastate.edu/current/radar.phtml"
+            >
+              <span class="tool-name">IEM Radar Products</span>
+              <span class="tool-description">
+                Radar mosaics, NEXRAD resources, satellite products, and additional weather mapping tools.
+              </span>
+              <span class="tool-open">Open IEM tools ↗</span>
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div class="lower">
@@ -1088,7 +1632,7 @@
 
         <article class="graph-card">
           <div class="graph-card-title">
-            <span class="graph-dot confidence"></span>
+            <span class="graph-dot impact"></span>
             WEATHER IMPACT INDEX
           </div>
 
@@ -1142,10 +1686,6 @@
       "spgcookie@gmail.com"
     ];
 
-    /*
-      Uses your original general St. Louis dashboard center.
-      Change only if you intentionally want a different forecast point.
-    */
     const LAT = 38.6273;
     const LON = -90.3390;
 
@@ -1175,7 +1715,6 @@
 
     const state = {
       map: null,
-
       radarLayer: null,
       pendingRadarLayer: null,
       radarFrames: [],
@@ -1184,19 +1723,15 @@
       radarTimer: null,
       radarPlaying: false,
       radarLoading: false,
-
       mode: "MOSAIC",
       rings: [],
       ringMarker: null,
       ringsOn: true,
-
       activeWarn: null,
       forecastUrl: "",
-
       weatherLoading: false,
       alertsLoading: false,
       alertLayers: [],
-
       initialized: false,
       warningUnsubscribe: null
     };
@@ -1208,10 +1743,10 @@
       $("latest")
     ];
 
-    function setMessage(id, message, style = "") {
-      const target = $(id);
-      target.textContent = message;
-      target.className = `note${style ? ` ${style}` : ""}`;
+    function setMessage(id, message, type = "") {
+      const element = $(id);
+      element.textContent = message;
+      element.className = `note${type ? ` ${type}` : ""}`;
     }
 
     function setRadarStatus(message, color = "#f59e0b") {
@@ -1256,27 +1791,21 @@
     }
 
     function celsiusToFahrenheit(celsius) {
-      if (!isNumber(celsius)) {
-        return null;
-      }
-
-      return Math.round((Number(celsius) * 9 / 5) + 32);
+      return isNumber(celsius)
+        ? Math.round((Number(celsius) * 9 / 5) + 32)
+        : null;
     }
 
     function kmhToMph(kmh) {
-      if (!isNumber(kmh)) {
-        return null;
-      }
-
-      return Math.round(Number(kmh) * 0.621371);
+      return isNumber(kmh)
+        ? Math.round(Number(kmh) * 0.621371)
+        : null;
     }
 
     function pascalsToHpa(pascals) {
-      if (!isNumber(pascals)) {
-        return null;
-      }
-
-      return Math.round(Number(pascals) / 100);
+      return isNumber(pascals)
+        ? Math.round(Number(pascals) / 100)
+        : null;
     }
 
     function windMphFromText(value) {
@@ -1384,7 +1913,7 @@
       state.pendingRadarLayer = null;
     }
 
-    function createRadarLayer(url, nativeZoom) {
+    function makeRadarLayer(url, nativeZoom) {
       return L.tileLayer(url, {
         pane: "radarPane",
         opacity: Number($("opacity").value) / 100,
@@ -1418,8 +1947,7 @@
         state.pendingRadarLayer = null;
       }
 
-      const nextLayer = createRadarLayer(tileUrl, 7);
-
+      const nextLayer = makeRadarLayer(tileUrl, 7);
       state.pendingRadarLayer = nextLayer;
 
       nextLayer.once("load", () => {
@@ -1428,13 +1956,12 @@
         }
 
         removeMapLayer(state.radarLayer);
-
         state.radarLayer = nextLayer;
         state.pendingRadarLayer = null;
       });
 
       nextLayer.on("tileerror", () => {
-        console.warn("RainViewer radar tile could not load.");
+        console.warn("RainViewer radar tile error.");
       });
 
       nextLayer.addTo(state.map);
@@ -1445,7 +1972,6 @@
         }
 
         removeMapLayer(state.radarLayer);
-
         state.radarLayer = nextLayer;
         state.pendingRadarLayer = null;
       }, 3500);
@@ -1464,7 +1990,7 @@
       }
 
       state.radarLoading = true;
-      setRadarStatus("● LOADING RAINVIEWER MOSAIC", "#f59e0b");
+      setRadarStatus("● LOADING RAINVIEWER MOSAIC");
 
       try {
         const data = await fetchJson(
@@ -1472,13 +1998,11 @@
         );
 
         const frames = Array.isArray(data.radar?.past)
-          ? data.radar.past.filter((frame) => {
-              return frame?.path && isNumber(frame.time);
-            })
+          ? data.radar.past.filter((frame) => frame?.path && isNumber(frame.time))
           : [];
 
         if (!data.host || !frames.length) {
-          throw new Error("RainViewer returned no usable radar frames.");
+          throw new Error("No usable RainViewer radar frames.");
         }
 
         state.radarHost = data.host.replace(/\/$/, "");
@@ -1486,7 +2010,6 @@
         state.radarIndex = frames.length - 1;
 
         showMosaicFrame();
-
         setRadarControlsEnabled(true);
         setRadarStatus("● LIVE RAINVIEWER MOSAIC", "#22c55e");
       } catch (error) {
@@ -1501,39 +2024,9 @@
       }
     }
 
-    function loadIemRadar(product) {
-      if (!state.map) {
-        return;
-      }
-
-      pauseRadarAnimation();
-      clearRadarLayer();
-
-      const radarId = $("radarSite").value;
-      const iemRadarId = radarId.slice(1);
-
-      const tileUrl =
-        "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/" +
-        `ridge::${iemRadarId}-${product}-0/{z}/{x}/{y}.png`;
-
-      const layer = createRadarLayer(tileUrl, 10);
-
-      layer.on("tileerror", () => {
-        setRadarStatus("● RADAR TILE TEMPORARILY UNAVAILABLE", "#ef2626");
-      });
-
-      layer.addTo(state.map);
-      state.radarLayer = layer;
-
-      $("radarTime").textContent = `Latest ${product} scan`;
-      setRadarStatus(`● LIVE ${product} — ${radarId}`, "#22c55e");
-      setRadarControlsEnabled(false);
-    }
-
     function pauseRadarAnimation() {
       state.radarPlaying = false;
       $("play").textContent = "▶ Play";
-      $("play").setAttribute("aria-label", "Play radar animation");
 
       if (state.radarTimer !== null) {
         clearInterval(state.radarTimer);
@@ -1558,7 +2051,6 @@
 
       state.radarPlaying = true;
       $("play").textContent = "❚❚ Pause";
-      $("play").setAttribute("aria-label", "Pause radar animation");
 
       state.radarTimer = window.setInterval(() => {
         state.radarIndex =
@@ -1568,17 +2060,43 @@
       }, RADAR_FRAME_DURATION_MS);
     }
 
-    function setRadarMode(newMode) {
-      state.mode = newMode;
+    function loadIemRadar(product) {
+      if (!state.map) {
+        return;
+      }
 
-      document.querySelectorAll(".mode").forEach((button) => {
-        button.classList.toggle(
-          "active",
-          button.dataset.mode === newMode
-        );
+      pauseRadarAnimation();
+      clearRadarLayer();
+
+      const radarId = $("radarSite").value;
+      const iemId = radarId.slice(1);
+
+      const tileUrl =
+        "https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/" +
+        `ridge::${iemId}-${product}-0/{z}/{x}/{y}.png`;
+
+      const layer = makeRadarLayer(tileUrl, 10);
+
+      layer.on("tileerror", () => {
+        setRadarStatus("● RADAR TILE TEMPORARILY UNAVAILABLE", "#ef2626");
       });
 
-      if (newMode === "MOSAIC") {
+      layer.addTo(state.map);
+      state.radarLayer = layer;
+
+      $("radarTime").textContent = `Latest ${product} scan`;
+      setRadarStatus(`● LIVE ${product} — ${radarId}`, "#22c55e");
+      setRadarControlsEnabled(false);
+    }
+
+    function setRadarMode(mode) {
+      state.mode = mode;
+
+      document.querySelectorAll(".mode").forEach((button) => {
+        button.classList.toggle("active", button.dataset.mode === mode);
+      });
+
+      if (mode === "MOSAIC") {
         $("modeMessage").textContent =
           "RainViewer Mosaic provides animated precipitation imagery.";
 
@@ -1589,11 +2107,11 @@
         return;
       }
 
-      if (["N0B", "N0U", "N0S", "NET"].includes(newMode)) {
+      if (["N0B", "N0U", "N0S", "NET"].includes(mode)) {
         $("modeMessage").textContent =
           "Latest individual-radar product from the selected NEXRAD site.";
 
-        loadIemRadar(newMode);
+        loadIemRadar(mode);
         return;
       }
 
@@ -1605,12 +2123,11 @@
         "Correlation Coefficient requires a future Level II-compatible data source.";
 
       $("radarTime").textContent = "Level II source required";
-      setRadarStatus("● ADVANCED PRODUCT NOT CONNECTED", "#f59e0b");
+      setRadarStatus("● ADVANCED PRODUCT NOT CONNECTED");
     }
 
     function clearRadarRings() {
       state.rings.forEach((ring) => removeMapLayer(ring));
-
       state.rings = [];
 
       removeMapLayer(state.ringMarker);
@@ -1618,8 +2135,8 @@
     }
 
     function updateRadarSite() {
-      const id = $("radarSite").value;
-      const site = SITES[id];
+      const radarId = $("radarSite").value;
+      const site = SITES[radarId];
 
       if (!site || !state.map) {
         return;
@@ -1653,12 +2170,10 @@
         interactive: false
       })
         .addTo(state.map)
-        .bindTooltip(`${id} — ${site[2]}`, {
-          direction: "top"
-        });
+        .bindTooltip(`${radarId} — ${site[2]}`, { direction: "top" });
 
       $("radarMeta").innerHTML = `
-        <strong>${escapeHtml(id)}</strong> — ${escapeHtml(site[2])}<br>
+        <strong>${escapeHtml(radarId)}</strong> — ${escapeHtml(site[2])}<br>
         Product: ${escapeHtml(state.mode)}<br>
         Rings: 50 / 100 / 150 / 200 km
       `;
@@ -1679,18 +2194,16 @@
 
     async function loadCurrentConditions(stationsUrl) {
       try {
-        const stationData = await nwsFetch(stationsUrl);
+        const stationsData = await nwsFetch(stationsUrl);
 
-        const stations = Array.isArray(stationData.features)
-          ? stationData.features.slice(0, 10)
+        const stations = Array.isArray(stationsData.features)
+          ? stationsData.features.slice(0, 10)
           : [];
 
         let observation = null;
 
         for (const station of stations) {
-          if (!station?.id) {
-            continue;
-          }
+          if (!station?.id) continue;
 
           try {
             const data = await nwsFetch(`${station.id}/observations/latest`);
@@ -1705,44 +2218,35 @@
         }
 
         if (!observation) {
-          throw new Error("No usable nearby observation was found.");
+          throw new Error("No usable nearby observation.");
         }
 
-        const temperature = celsiusToFahrenheit(observation.temperature?.value);
-        const heatIndex = celsiusToFahrenheit(observation.heatIndex?.value);
-        const windChill = celsiusToFahrenheit(observation.windChill?.value);
-        const feelsLike = heatIndex ?? windChill ?? temperature;
+        const temp = celsiusToFahrenheit(observation.temperature?.value);
+        const heat = celsiusToFahrenheit(observation.heatIndex?.value);
+        const chill = celsiusToFahrenheit(observation.windChill?.value);
+        const feels = heat ?? chill ?? temp;
         const wind = kmhToMph(observation.windSpeed?.value);
         const humidity = observation.relativeHumidity?.value;
         const pressure = pascalsToHpa(observation.barometricPressure?.value);
 
-        $("temperature").textContent =
-          temperature === null ? "--" : `${temperature}°`;
-
+        $("temperature").textContent = temp === null ? "--" : `${temp}°`;
         $("condition").textContent = safeText(
           observation.textDescription,
           "Conditions unavailable"
         );
-
-        $("feels").textContent =
-          feelsLike === null ? "--" : `${feelsLike}°`;
-
-        $("wind").textContent =
-          wind === null ? "--" : `${wind} mph`;
-
+        $("feels").textContent = feels === null ? "--" : `${feels}°`;
+        $("wind").textContent = wind === null ? "--" : `${wind} mph`;
         $("humidity").textContent = isNumber(humidity)
           ? `${Math.round(Number(humidity))}%`
           : "--";
-
-        $("pressure").textContent =
-          pressure === null ? "--" : `${pressure} hPa`;
+        $("pressure").textContent = pressure === null ? "--" : `${pressure} hPa`;
       } catch (error) {
         console.error("Current conditions error:", error);
         setCurrentUnavailable();
       }
     }
 
-    function graphHourLabel(period, index) {
+    function graphTime(period, index) {
       if (index === 0) {
         return "Now";
       }
@@ -1766,32 +2270,34 @@
         return;
       }
 
-      const rawValues = periods.map((period, index) => {
+      const values = periods.map((period, index) => {
         const value = Number(options.value(period, index));
         return Number.isFinite(value) ? value : 0;
       });
 
-      const minValue = Number.isFinite(options.min)
+      const min = Number.isFinite(options.min)
         ? options.min
-        : Math.min(...rawValues, 0);
+        : Math.min(...values, 0);
 
-      const maxValue = Number.isFinite(options.max)
+      const max = Number.isFinite(options.max)
         ? options.max
-        : Math.max(...rawValues, 1);
+        : Math.max(...values, 1);
 
-      const range = Math.max(maxValue - minValue, 1);
+      const range = Math.max(max - min, 1);
 
       periods.forEach((period, index) => {
-        const rawValue = rawValues[index];
-        const relative = Math.max(0, rawValue - minValue);
-        const height = Math.max(3, Math.min(150, (relative / range) * 150));
+        const value = values[index];
+        const height = Math.max(
+          3,
+          Math.min(150, ((value - min) / range) * 150)
+        );
 
         const column = document.createElement("div");
         column.className = "graph-column";
 
-        const value = document.createElement("div");
-        value.className = "graph-value";
-        value.textContent = options.label(rawValue, index);
+        const valueLabel = document.createElement("div");
+        valueLabel.className = "graph-value";
+        valueLabel.textContent = options.label(value, index);
 
         const bar = document.createElement("div");
         bar.className = `graph-bar ${options.color}`;
@@ -1799,38 +2305,30 @@
 
         const time = document.createElement("div");
         time.className = "graph-time";
-        time.textContent = graphHourLabel(period, index);
+        time.textContent = graphTime(period, index);
 
-        column.title = `${graphHourLabel(period, index)}: ${options.label(rawValue, index)}`;
+        column.title = `${graphTime(period, index)}: ${options.label(value, index)}`;
 
-        column.append(value, bar, time);
+        column.append(valueLabel, bar, time);
         graph.appendChild(column);
       });
     }
 
     function weatherImpact(period) {
-      const precipitation = Number(period.probabilityOfPrecipitation?.value) || 0;
+      const precip = Number(period.probabilityOfPrecipitation?.value) || 0;
       const wind = windMphFromText(period.windSpeed);
       const forecast = String(period.shortForecast || "").toLowerCase();
 
-      let impact = precipitation * 0.65 + wind * 1.4;
+      let score = precip * 0.65 + wind * 1.4;
 
-      if (forecast.includes("thunder")) {
-        impact += 25;
-      }
+      if (forecast.includes("thunder")) score += 25;
+      if (forecast.includes("snow") || forecast.includes("ice")) score += 20;
+      if (forecast.includes("fog")) score += 12;
 
-      if (forecast.includes("snow") || forecast.includes("ice")) {
-        impact += 20;
-      }
-
-      if (forecast.includes("fog")) {
-        impact += 12;
-      }
-
-      return Math.min(100, Math.round(impact));
+      return Math.min(100, Math.round(score));
     }
 
-    function renderPremiumGraphs(periods) {
+    function renderGraphs(periods) {
       renderGraph("premiumPrecipGraph", periods, {
         min: 0,
         max: 100,
@@ -1839,17 +2337,14 @@
         label: (value) => `${Math.round(value)}%`
       });
 
-      const temperatures = periods.map((period) => {
-        return Number(period.temperature) || 0;
-      });
-
-      const temperatureMin = Math.min(...temperatures);
-      const temperatureMax = Math.max(...temperatures);
-      const temperaturePadding = Math.max(5, Math.round((temperatureMax - temperatureMin) * 0.2));
+      const temps = periods.map((period) => Number(period.temperature) || 0);
+      const minTemp = Math.min(...temps);
+      const maxTemp = Math.max(...temps);
+      const padding = Math.max(5, Math.round((maxTemp - minTemp) * 0.2));
 
       renderGraph("premiumTempGraph", periods, {
-        min: temperatureMin - temperaturePadding,
-        max: temperatureMax + temperaturePadding,
+        min: minTemp - padding,
+        max: maxTemp + padding,
         color: "temp",
         value: (period) => Number(period.temperature) || 0,
         label: (value) => `${Math.round(value)}°`
@@ -1877,7 +2372,7 @@
       renderGraph("premiumImpactGraph", periods, {
         min: 0,
         max: 100,
-        color: "confidence",
+        color: "impact",
         value: (period) => weatherImpact(period),
         label: (value) => `${Math.round(value)}`
       });
@@ -1888,9 +2383,7 @@
 
       const time = index === 0
         ? "NOW"
-        : new Date(period.startTime).toLocaleTimeString([], {
-            hour: "numeric"
-          });
+        : new Date(period.startTime).toLocaleTimeString([], { hour: "numeric" });
 
       const temperature = isNumber(period.temperature)
         ? `${Math.round(Number(period.temperature))}°`
@@ -1901,18 +2394,13 @@
         : "--";
 
       article.className = "hour";
-
       article.innerHTML = `
         <div class="hour-time">${escapeHtml(time)}</div>
         <div class="hour-temp">${temperature}</div>
         <div style="font-size:24px;">${weatherIcon(period.shortForecast)}</div>
-        <div class="hour-text">
-          ${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}
-        </div>
+        <div class="hour-text">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
         <div class="hour-text">💧 ${precipitation}</div>
-        <div class="hour-text">
-          💨 ${escapeHtml(safeText(period.windSpeed, "--"))}
-        </div>
+        <div class="hour-text">💨 ${escapeHtml(safeText(period.windSpeed, "--"))}</div>
       `;
 
       return article;
@@ -1927,10 +2415,10 @@
           : [];
 
         if (!periods.length) {
-          throw new Error("No hourly forecast periods were returned.");
+          throw new Error("No hourly forecast periods.");
         }
 
-        renderPremiumGraphs(periods);
+        renderGraphs(periods);
 
         const fragment = document.createDocumentFragment();
 
@@ -1944,96 +2432,26 @@
 
         $("hourly").innerHTML =
           `<div class="empty">Hourly forecast temporarily unavailable.</div>`;
-
-        [
-          "premiumPrecipGraph",
-          "premiumTempGraph",
-          "premiumWindGraph",
-          "premiumHumidityGraph",
-          "premiumImpactGraph"
-        ].forEach((graphId) => {
-          const graph = $(graphId);
-
-          if (graph) {
-            graph.innerHTML =
-              `<div class="empty">Graph temporarily unavailable.</div>`;
-          }
-        });
       }
     }
 
     function isWarningExpired(warning) {
-      if (!warning?.expiresAt?.toDate) {
-        return false;
-      }
-
-      return warning.expiresAt.toDate().getTime() <= Date.now();
+      return Boolean(
+        warning?.expiresAt?.toDate &&
+        warning.expiresAt.toDate().getTime() <= Date.now()
+      );
     }
 
-    function getWarningBadge(level) {
+    function warningBadge(level) {
       if (level === "WATCH") {
-        return {
-          label: "CHAMIWATCH",
-          color: "#d6a600"
-        };
+        return { label: "CHAMIWATCH", color: "#d6a600" };
       }
 
       if (level === "ALERT") {
-        return {
-          label: "CHAMIALERT",
-          color: "#a61010"
-        };
+        return { label: "CHAMIALERT", color: "#a61010" };
       }
 
-      return {
-        label: "CHAMIWARN",
-        color: "#cb6300"
-      };
-    }
-
-    function createDailyRow(period) {
-      const article = document.createElement("article");
-      const dateKey = period.startTime ? period.startTime.slice(0, 10) : "";
-
-      const warning = state.activeWarn;
-
-      const warningActive =
-        warning &&
-        warning.active === true &&
-        !isWarningExpired(warning) &&
-        warning.alertDate === dateKey;
-
-      const level = safeText(warning?.level, "WARN").toUpperCase();
-      const badge = getWarningBadge(level);
-
-      const temperature = isNumber(period.temperature)
-        ? `${Math.round(Number(period.temperature))}°`
-        : "--";
-
-      article.className = "day";
-
-      article.innerHTML = `
-        <div class="day-name">
-          ${escapeHtml(safeText(period.name, "Forecast"))}
-          ${
-            warningActive
-              ? `<span class="badge" style="background:${badge.color};">${badge.label}</span>`
-              : ""
-          }
-        </div>
-
-        <div style="font-size:20px;">
-          ${weatherIcon(period.shortForecast)}
-        </div>
-
-        <div class="day-temp">${temperature}</div>
-
-        <div class="day-desc">
-          ${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}
-        </div>
-      `;
-
-      return article;
+      return { label: "CHAMIWARN", color: "#cb6300" };
     }
 
     async function loadDailyForecast(url) {
@@ -2053,13 +2471,47 @@
         }
 
         if (!periods.length) {
-          throw new Error("No daily forecast periods were returned.");
+          throw new Error("No daily forecast periods.");
         }
 
         const fragment = document.createDocumentFragment();
 
         periods.forEach((period) => {
-          fragment.appendChild(createDailyRow(period));
+          const article = document.createElement("article");
+          const dateKey = period.startTime?.slice(0, 10) || "";
+          const warning = state.activeWarn;
+
+          const match =
+            warning &&
+            warning.active === true &&
+            !isWarningExpired(warning) &&
+            warning.alertDate === dateKey;
+
+          const badge = warningBadge(
+            safeText(warning?.level, "WARN").toUpperCase()
+          );
+
+          article.className = "day";
+          article.innerHTML = `
+            <div class="day-name">
+              ${escapeHtml(safeText(period.name, "Forecast"))}
+              ${
+                match
+                  ? `<span class="badge" style="background:${badge.color};">${badge.label}</span>`
+                  : ""
+              }
+            </div>
+            <div style="font-size:20px;">${weatherIcon(period.shortForecast)}</div>
+            <div class="day-temp">
+              ${isNumber(period.temperature)
+                ? `${Math.round(Number(period.temperature))}°`
+                : "--"
+              }
+            </div>
+            <div class="day-desc">${escapeHtml(safeText(period.shortForecast, "Forecast unavailable"))}</div>
+          `;
+
+          fragment.appendChild(article);
         });
 
         $("days").replaceChildren(fragment);
@@ -2076,29 +2528,6 @@
       state.alertLayers = [];
     }
 
-    function addAlertPolygon(feature) {
-      if (!feature?.geometry || !state.map) {
-        return;
-      }
-
-      try {
-        const layer = L.geoJSON(feature, {
-          pane: "alertPane",
-          interactive: false,
-          style: {
-            color: "#ef2626",
-            weight: 3,
-            fillColor: "#ef2626",
-            fillOpacity: 0.12
-          }
-        }).addTo(state.map);
-
-        state.alertLayers.push(layer);
-      } catch (error) {
-        console.warn("Unable to draw NWS alert polygon:", error);
-      }
-    }
-
     async function loadAlerts() {
       if (state.alertsLoading) {
         return;
@@ -2111,11 +2540,11 @@
           `https://api.weather.gov/alerts/active?point=${LAT},${LON}`
         );
 
-        const features = Array.isArray(data.features) ? data.features : [];
+        const alerts = Array.isArray(data.features) ? data.features : [];
 
         clearAlertLayers();
 
-        if (!features.length) {
+        if (!alerts.length) {
           $("alerts").innerHTML =
             `<div class="empty">✅ No active NWS alerts.</div>`;
 
@@ -2124,29 +2553,41 @@
 
         const fragment = document.createDocumentFragment();
 
-        features.forEach((feature) => {
+        alerts.forEach((feature) => {
           const props = feature.properties || {};
           const article = document.createElement("article");
 
           article.className = "alert";
-
           article.innerHTML = `
-            <strong>
-              ⚠️ ${escapeHtml(safeText(props.event, "Weather Alert"))}
-            </strong>
-
-            <p>
-              ${escapeHtml(safeText(props.headline, "Active weather alert."))}
-            </p>
+            <strong>⚠️ ${escapeHtml(safeText(props.event, "Weather Alert"))}</strong>
+            <p>${escapeHtml(safeText(props.headline, "Active weather alert."))}</p>
           `;
 
           fragment.appendChild(article);
-          addAlertPolygon(feature);
+
+          if (feature.geometry && state.map) {
+            try {
+              const layer = L.geoJSON(feature, {
+                pane: "alertPane",
+                interactive: false,
+                style: {
+                  color: "#ef2626",
+                  weight: 3,
+                  fillColor: "#ef2626",
+                  fillOpacity: 0.12
+                }
+              }).addTo(state.map);
+
+              state.alertLayers.push(layer);
+            } catch (error) {
+              console.warn("Alert polygon draw error:", error);
+            }
+          }
         });
 
         $("alerts").replaceChildren(fragment);
       } catch (error) {
-        console.error("NWS alert error:", error);
+        console.error("Alert loading error:", error);
 
         $("alerts").innerHTML =
           `<div class="empty">Unable to load active NWS alerts.</div>`;
@@ -2188,28 +2629,17 @@
 
         await Promise.allSettled(tasks);
       } catch (error) {
-        console.error("NWS point lookup error:", error);
-
+        console.error("Weather lookup error:", error);
         setCurrentUnavailable();
-
-        $("hourly").innerHTML =
-          `<div class="empty">Hourly forecast temporarily unavailable.</div>`;
-
-        $("days").innerHTML =
-          `<div class="empty">Seven-day forecast temporarily unavailable.</div>`;
       } finally {
         state.weatherLoading = false;
       }
     }
 
-    function dateToLocalInputValue(date) {
-      const localDate = new Date(date);
-
-      localDate.setMinutes(
-        localDate.getMinutes() - localDate.getTimezoneOffset()
-      );
-
-      return localDate.toISOString().slice(0, 16);
+    function toLocalDateTimeInput(date) {
+      const local = new Date(date);
+      local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
+      return local.toISOString().slice(0, 16);
     }
 
     function populateWarningForm() {
@@ -2224,15 +2654,12 @@
         return;
       }
 
-      $("warnLevel").value =
-        safeText(warning.level, "WARN").toUpperCase();
-
+      $("warnLevel").value = safeText(warning.level, "WARN").toUpperCase();
       $("warnDate").value = warning.alertDate || "";
       $("warnHeadline").value = warning.headline || "";
       $("warnDetails").value = warning.details || "";
-
       $("warnExpiry").value = warning.expiresAt?.toDate
-        ? dateToLocalInputValue(warning.expiresAt.toDate())
+        ? toLocalDateTimeInput(warning.expiresAt.toDate())
         : "";
     }
 
@@ -2253,10 +2680,9 @@
         },
         (error) => {
           console.error("ChamiWARN listener error:", error);
-
           setMessage(
             "warnMessage",
-            "Unable to read the current ChamiWARN status. Check Firestore rules.",
+            "Unable to read current ChamiWARN status. Check Firestore rules.",
             "error"
           );
         }
@@ -2264,32 +2690,25 @@
     }
 
     function validateWarningForm() {
-      const level = $("warnLevel").value;
-      const date = $("warnDate").value;
-      const headline = $("warnHeadline").value.trim();
-      const expiryValue = $("warnExpiry").value;
-
-      if (!["WATCH", "WARN", "ALERT"].includes(level)) {
+      if (!["WATCH", "WARN", "ALERT"].includes($("warnLevel").value)) {
         return "Choose a valid status level.";
       }
 
-      if (!date) {
+      if (!$("warnDate").value) {
         return "Choose an affected date.";
       }
 
-      if (!headline) {
+      if (!$("warnHeadline").value.trim()) {
         return "A headline is required.";
       }
 
-      if (expiryValue) {
-        const expiry = new Date(expiryValue);
+      const expiry = $("warnExpiry").value;
 
-        if (Number.isNaN(expiry.getTime())) {
-          return "Enter a valid expiration date and time.";
-        }
+      if (expiry) {
+        const date = new Date(expiry);
 
-        if (expiry.getTime() <= Date.now()) {
-          return "Expiration must be in the future.";
+        if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
+          return "Expiration must be a valid future time.";
         }
       }
 
@@ -2297,18 +2716,14 @@
     }
 
     async function publishWarning() {
-      const errorMessage = validateWarningForm();
+      const problem = validateWarningForm();
 
-      if (errorMessage) {
-        setMessage("warnMessage", errorMessage, "error");
+      if (problem) {
+        setMessage("warnMessage", problem, "error");
         return;
       }
 
-      const expiryInput = $("warnExpiry").value;
-
-      const expiresAt = expiryInput
-        ? Timestamp.fromDate(new Date(expiryInput))
-        : null;
+      const expiry = $("warnExpiry").value;
 
       try {
         $("publish").disabled = true;
@@ -2319,7 +2734,7 @@
           alertDate: $("warnDate").value,
           headline: $("warnHeadline").value.trim(),
           details: $("warnDetails").value.trim(),
-          expiresAt,
+          expiresAt: expiry ? Timestamp.fromDate(new Date(expiry)) : null,
           issuedBy: auth.currentUser?.email || "",
           issuedAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -2327,7 +2742,7 @@
 
         setMessage(
           "warnMessage",
-          "ChamiWARN successfully published or updated for public dashboard visitors.",
+          "ChamiWARN successfully published or updated for the public dashboard.",
           "success"
         );
       } catch (error) {
@@ -2335,7 +2750,7 @@
 
         setMessage(
           "warnMessage",
-          "Unable to publish. Verify your Firestore administrator permissions.",
+          "Unable to publish. Verify Firestore administrator permissions.",
           "error"
         );
       } finally {
@@ -2353,11 +2768,9 @@
         return;
       }
 
-      const confirmed = window.confirm(
-        "End the active ChamiWARN status? This will remove it from the public StormSignal dashboard."
-      );
-
-      if (!confirmed) {
+      if (!window.confirm(
+        "End the active ChamiWARN status? This removes it from the public StormSignal dashboard."
+      )) {
         return;
       }
 
@@ -2372,11 +2785,11 @@
           "success"
         );
       } catch (error) {
-        console.error("ChamiWARN removal error:", error);
+        console.error("ChamiWARN remove error:", error);
 
         setMessage(
           "warnMessage",
-          "Unable to remove ChamiWARN. Verify your Firestore administrator permissions.",
+          "Unable to remove ChamiWARN. Verify Firestore administrator permissions.",
           "error"
         );
       } finally {
@@ -2438,13 +2851,13 @@
       loadWeather();
       loadAlerts();
 
-      window.setInterval(() => {
+      setInterval(() => {
         if (state.mode === "MOSAIC") {
           loadMosaic();
         }
       }, RADAR_REFRESH_MS);
 
-      window.setInterval(() => {
+      setInterval(() => {
         loadWeather();
         loadAlerts();
       }, WEATHER_REFRESH_MS);
@@ -2579,8 +2992,8 @@
 
       initializeDashboard();
 
-      window.setTimeout(refreshMapSize, 150);
-      window.setTimeout(refreshMapSize, 500);
+      setTimeout(refreshMapSize, 150);
+      setTimeout(refreshMapSize, 500);
     });
 
     window.addEventListener("beforeunload", () => {
